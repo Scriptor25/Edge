@@ -132,7 +132,6 @@ public class World {
 
         final var baseColor = new Vector4f(0.8f, 0.8f, 0.8f, 1.0f);
         final var checkerColor = new Vector4f(0.6f, 0.6f, 0.6f, 1.0f);
-        final var otherColor = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
 
         for (int z = 0; z < bounds.z; ++z)
             for (int y = 0; y < bounds.y; ++y)
@@ -141,47 +140,50 @@ public class World {
                     if (type == null)
                         continue;
 
-                    var mesh = meshes[type.ordinal()];
-                    if (mesh == null)
-                        mesh = defaultMesh;
+                    final var mesh = meshes[type.ordinal()] == null
+                            ? defaultMesh
+                            : meshes[type.ordinal()];
 
                     final Vector4f color;
+                    final Mesh baseMesh;
                     switch (type) {
                         case Base:
                             final var isEven = (x + y + z) % 2 == 0;
                             color = isEven ? baseColor : checkerColor;
+                            baseMesh = mesh;
                             break;
 
                         default:
-                            color = otherColor;
+                            color = baseColor;
+                            baseMesh = meshes[0];
                             break;
                     }
 
                     if (y == 0) {
                         if (isAir(x - 1, y, z))
-                            mesh.addQuad(new Vector3f(x - 0.5f, y, z - 0.5f), upHalf, forward, baseColor);
+                            baseMesh.addQuad(new Vector3f(x - 0.5f, y, z - 0.5f), upHalf, forward, baseColor);
                         if (isAir(x + 1, y, z))
-                            mesh.addQuad(new Vector3f(x + 0.5f, y, z - 0.5f), forward, upHalf, baseColor);
-                        mesh.addQuad(new Vector3f(x - 0.5f, y, z - 0.5f), forward, right, baseColor);
+                            baseMesh.addQuad(new Vector3f(x + 0.5f, y, z - 0.5f), forward, upHalf, baseColor);
+                        baseMesh.addQuad(new Vector3f(x - 0.5f, y, z - 0.5f), forward, right, baseColor);
                         if (isAir(x, y + 1, z))
                             mesh.addQuad(new Vector3f(x - 0.5f, y + 0.5f, z - 0.5f), right, forward, color);
                         if (isAir(x, y, z - 1))
-                            mesh.addQuad(new Vector3f(x - 0.5f, y, z - 0.5f), right, upHalf, baseColor);
+                            baseMesh.addQuad(new Vector3f(x - 0.5f, y, z - 0.5f), right, upHalf, baseColor);
                         if (isAir(x, y, z + 1))
-                            mesh.addQuad(new Vector3f(x - 0.5f, y, z + 0.5f), upHalf, right, baseColor);
+                            baseMesh.addQuad(new Vector3f(x - 0.5f, y, z + 0.5f), upHalf, right, baseColor);
                     } else {
                         if (isAir(x - 1, y, z))
-                            mesh.addQuad(new Vector3f(x - 0.5f, y - 0.5f, z - 0.5f), up, forward, baseColor);
+                            baseMesh.addQuad(new Vector3f(x - 0.5f, y - 0.5f, z - 0.5f), up, forward, baseColor);
                         if (isAir(x + 1, y, z))
-                            mesh.addQuad(new Vector3f(x + 0.5f, y - 0.5f, z - 0.5f), forward, up, baseColor);
+                            baseMesh.addQuad(new Vector3f(x + 0.5f, y - 0.5f, z - 0.5f), forward, up, baseColor);
                         if (isAir(x, y - 1, z))
-                            mesh.addQuad(new Vector3f(x - 0.5f, y - 0.5f, z - 0.5f), forward, right, baseColor);
+                            baseMesh.addQuad(new Vector3f(x - 0.5f, y - 0.5f, z - 0.5f), forward, right, baseColor);
                         if (isAir(x, y + 1, z))
                             mesh.addQuad(new Vector3f(x - 0.5f, y + 0.5f, z - 0.5f), right, forward, color);
                         if (isAir(x, y, z - 1))
-                            mesh.addQuad(new Vector3f(x - 0.5f, y - 0.5f, z - 0.5f), right, up, baseColor);
+                            baseMesh.addQuad(new Vector3f(x - 0.5f, y - 0.5f, z - 0.5f), right, up, baseColor);
                         if (isAir(x, y, z + 1))
-                            mesh.addQuad(new Vector3f(x - 0.5f, y - 0.5f, z + 0.5f), up, right, baseColor);
+                            baseMesh.addQuad(new Vector3f(x - 0.5f, y - 0.5f, z + 0.5f), up, right, baseColor);
                     }
                 }
 

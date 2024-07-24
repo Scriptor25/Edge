@@ -13,6 +13,10 @@ public class Model {
         this.material = material;
     }
 
+    public Model(final Engine engine, final String meshId, final String materialId, final String programId) {
+        this(engine.createMesh(meshId), engine.createMaterial(materialId, programId));
+    }
+
     public Mesh getMesh() {
         return mesh;
     }

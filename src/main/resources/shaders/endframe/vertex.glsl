@@ -11,13 +11,17 @@ uniform mat4 VIEW;
 uniform mat4 PROJ;
 uniform float TIME;
 
+float map(float x, float xmin, float xmax, float min, float max) {
+    return min + (max - min) * (xmax - x) / (xmax - xmin);
+}
+
 void main() {
     gl_Position = PROJ * VIEW * POSITION;
     vNormal = NORMAL;
 
-    float r = cos(TIME) * 0.5 + 0.5;
-    float g = sin(TIME) * 0.5 + 0.5;
-    float b = cos(TIME * 2.0) * 0.5 + 0.5;
+    float r = map(sin(10.0 * TIME), -1.0, 1.0, 0.8, 1.0);
+    float g = map(cos(5.0 * TIME), -1.0, 1.0, 0.8, 1.0);
+    float b = map(sin(0.6 * TIME), -1.0, 1.0, 0.8, 1.0);
 
     vColor = vec4(COLOR.rgb * vec3(r, g, b), COLOR.a);
 }
