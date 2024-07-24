@@ -130,8 +130,8 @@ public class World {
         final var upHalf = new Vector3f(0.0f, 0.5f, 0.0f);
         final var forward = new Vector3f(0.0f, 0.0f, 1.0f);
 
-        final var baseColor = new Vector4f(0.8f, 0.8f, 0.8f, 1.0f);
-        final var checkerColor = new Vector4f(0.6f, 0.6f, 0.6f, 1.0f);
+        final var baseColor = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+        final var checkerColor = new Vector4f(0.95f, 0.95f, 0.95f, 1.0f);
 
         for (int z = 0; z < bounds.z; ++z)
             for (int y = 0; y < bounds.y; ++y)
@@ -148,7 +148,7 @@ public class World {
                     final Mesh baseMesh;
                     switch (type) {
                         case Base:
-                            final var isEven = (x + y + z) % 2 == 0;
+                            final var isEven = (x + z) % 2 == 0;
                             color = isEven ? baseColor : checkerColor;
                             baseMesh = mesh;
                             break;

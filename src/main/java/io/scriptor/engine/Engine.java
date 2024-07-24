@@ -190,10 +190,10 @@ public class Engine {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         final var aspect = (float) width / (float) height;
-        final var view = new Matrix4f().lookAtLH(20, 8, -3, 6, 1, 12, 0, 1, 0);
+        final var view = new Matrix4f().lookAtLH(18, 14, 0, 6, 2, 12, 0, 1, 0);
         // final var proj = new Matrix4f().perspectiveLH(org.joml.Math.toRadians(90),
         // aspect, 0.3f, 100.0f);
-        final var proj = new Matrix4f().orthoLH(-aspect * 5.0f, aspect * 5.0f, -5.0f, 5.0f, 0.3f, 100.0f);
+        final var proj = new Matrix4f().orthoLH(-aspect * 10.0f, aspect * 10.0f, -10.0f, 10.0f, 0.3f, 100.0f);
 
         for (final var material : materials.values()) {
             material.bind();

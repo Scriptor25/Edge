@@ -10,7 +10,7 @@ import io.scriptor.engine.Model;
 public class Edge extends Cycle {
 
         public static void main(String[] args) {
-                final var engine = new Engine("Edge", 960, 320);
+                final var engine = new Engine("Edge", 640, 320);
                 engine.register(new Edge());
                 engine.start();
                 engine.destroy();
