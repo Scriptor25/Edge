@@ -7,12 +7,18 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import org.joml.Vector3f;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 import org.joml.Vector4f;
 import org.yaml.snakeyaml.Yaml;
 
 import io.scriptor.engine.Mesh;
 
 public class World {
+
+    private static Vector3i get(final List<Integer> xyz) {
+        return new Vector3i(xyz.get(0), xyz.get(1), xyz.get(2));
+    }
 
     public static World load(final InputStream stream) {
         final var yaml = new Yaml();
@@ -27,11 +33,12 @@ public class World {
         final var boundsData = (List<Integer>) map.get("bounds");
         final var spawnData = (List<Integer>) map.get("spawn");
         final var prismsData = (List<List<Integer>>) map.get("prisms");
-        final var bounds = new Vec3<Integer>(boundsData.get(0), boundsData.get(1), boundsData.get(2));
-        final var spawn = new Vec3<Integer>(spawnData.get(0), spawnData.get(1), spawnData.get(2));
-        final var prisms = (Vec3<Integer>[]) prismsData.stream()
-                .map(position -> new Vec3<>(position.get(0), position.get(1), position.get(2)))
-                .toArray(Vec3[]::new);
+        final var bounds = get(boundsData);
+        final var spawn = get(spawnData);
+        final var prisms = prismsData
+                .stream()
+                .map(World::get)
+                .toArray(Vector3i[]::new);
         final var world = new World(id, name, bounds, spawn, prisms);
         final var voxels = (List<List<List<Integer>>>) map.get("voxels");
         for (int z = 0; z < bounds.z; ++z)
@@ -60,19 +67,19 @@ public class World {
 
     private final String id;
     private final String name;
-    private final Vec3<Integer> bounds;
-    private final Vec3<Integer> spawn;
-    private final Vec3<Integer>[] prisms;
+    private final Vector3ic bounds;
+    private final Vector3ic spawn;
+    private final Vector3ic[] prisms;
     private final VoxelType[][][] voxels;
 
-    public World(final String id, final String name, final Vec3<Integer> bounds, final Vec3<Integer> spawn,
-            final Vec3<Integer>[] prisms) {
+    public World(final String id, final String name, final Vector3ic bounds, final Vector3ic spawn,
+            final Vector3ic[] prisms) {
         this.id = id;
         this.name = name;
         this.bounds = bounds;
         this.spawn = spawn;
         this.prisms = prisms;
-        this.voxels = new VoxelType[bounds.z][bounds.y][bounds.x];
+        this.voxels = new VoxelType[bounds.z()][bounds.y()][bounds.x()];
     }
 
     public String getID() {
@@ -83,11 +90,11 @@ public class World {
         return name;
     }
 
-    public Vec3<Integer> getBounds() {
+    public Vector3ic getBounds() {
         return bounds;
     }
 
-    public Vec3<Integer> getSpawn() {
+    public Vector3ic getSpawn() {
         return spawn;
     }
 
@@ -95,22 +102,22 @@ public class World {
         return prisms.length;
     }
 
-    public Vec3<Integer> getPrism(final int index) {
+    public Vector3ic getPrism(final int index) {
         return prisms[index];
     }
 
-    public Stream<Vec3<Integer>> getPrisms() {
+    public Stream<Vector3ic> getPrisms() {
         return Arrays.stream(prisms);
     }
 
     public VoxelType get(final int x, final int y, final int z) {
-        if (x < 0 || x >= bounds.x || y < 0 || y >= bounds.y || z < 0 || z >= bounds.z)
+        if (x < 0 || x >= bounds.x() || y < 0 || y >= bounds.y() || z < 0 || z >= bounds.z())
             return null;
         return voxels[z][y][x];
     }
 
     public void set(final int x, final int y, final int z, final VoxelType voxel) {
-        if (x < 0 || x >= bounds.x || y < 0 || y >= bounds.y || z < 0 || z >= bounds.z)
+        if (x < 0 || x >= bounds.x() || y < 0 || y >= bounds.y() || z < 0 || z >= bounds.z())
             return;
         voxels[z][y][x] = voxel;
     }
@@ -133,9 +140,9 @@ public class World {
         final var baseColor = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
         final var checkerColor = new Vector4f(0.95f, 0.95f, 0.95f, 1.0f);
 
-        for (int z = 0; z < bounds.z; ++z)
-            for (int y = 0; y < bounds.y; ++y)
-                for (int x = 0; x < bounds.x; ++x) {
+        for (int z = 0; z < bounds.z(); ++z)
+            for (int y = 0; y < bounds.y(); ++y)
+                for (int x = 0; x < bounds.x(); ++x) {
                     final var type = get(x, y, z);
                     if (type == null)
                         continue;
