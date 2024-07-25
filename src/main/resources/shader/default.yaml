@@ -1,0 +1,6 @@
+id: default
+shaders:
+  - path: shader/default/vertex.glsl
+    type: vertex
+  - path: shader/default/fragment.glsl
+    type: fragment

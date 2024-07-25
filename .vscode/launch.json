@@ -8,7 +8,7 @@
             "type": "java",
             "name": "Edge",
             "request": "launch",
-            "mainClass": "io.scriptor.Edge",
+            "mainClass": "io.scriptor.Main",
             "projectName": "edge"
         }
     ]

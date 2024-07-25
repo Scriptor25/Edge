@@ -1,0 +1,6 @@
+id: rainbow
+shaders:
+  - path: shader/rainbow/vertex.glsl
+    type: vertex
+  - path: shader/rainbow/fragment.glsl
+    type: fragment

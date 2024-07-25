@@ -12,17 +12,36 @@ import static org.lwjgl.opengl.GL20.glShaderSource;
 import static org.lwjgl.opengl.GL20.glUseProgram;
 import static org.lwjgl.opengl.GL20.glValidateProgram;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
+
+import org.yaml.snakeyaml.Yaml;
 
 public class GLProgram {
 
-    public static record ShaderInfo(String filename, boolean isResource, int type) {
+    private static final Map<String, GLProgram> instances = new HashMap<>();
+
+    public static GLProgram get(final String id) {
+        if (!instances.containsKey(id))
+            throw new IllegalStateException(id);
+        return instances.get(id);
     }
 
-    private static String readSource(final String filename, final boolean isResource) throws IOException {
-        final var stream = isResource ? ClassLoader.getSystemResourceAsStream(filename) : new FileInputStream(filename);
+    public static GLProgram create(final String filename) {
+        final var yaml = new Yaml();
+        final var info = yaml.loadAs(ClassLoader.getSystemResourceAsStream(filename), ProgramInfo.class);
+        if (instances.containsKey(info.id))
+            throw new IllegalStateException(info.id);
+
+        final var instance = new GLProgram(info.shaders.toArray(ShaderInfo[]::new));
+        instances.put(info.id, instance);
+        return instance;
+    }
+
+    private static String readSource(final String filename) throws IOException {
+        final var stream = ClassLoader.getSystemResourceAsStream(filename);
         final var bytes = stream.readAllBytes();
         return new String(bytes);
     }
@@ -31,19 +50,18 @@ public class GLProgram {
         final var shader = glCreateShader(shaderType);
         glShaderSource(shader, source);
         glCompileShader(shader);
-
         glAttachShader(program, shader);
         glDeleteShader(shader);
     }
 
     private final int handle;
 
-    public GLProgram(final ShaderInfo... shaders) {
+    private GLProgram(final ShaderInfo... shaders) {
         handle = glCreateProgram();
 
         for (final var shader : shaders)
             try {
-                addShader(handle, shader.type(), readSource(shader.filename(), shader.isResource()));
+                addShader(handle, shader.getType(), readSource(shader.path));
             } catch (IOException e) {
             }
 
@@ -56,7 +74,7 @@ public class GLProgram {
         return this;
     }
 
-    public GLProgram uniform(final String name, Consumer<Integer> callback) {
+    public GLProgram uniform(final String name, final Consumer<Integer> callback) {
         callback.accept(glGetUniformLocation(handle, name));
         return this;
     }

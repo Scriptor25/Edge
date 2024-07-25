@@ -13,12 +13,17 @@ public class Vertex {
 
     public final Vector3f position = new Vector3f();
     public final Vector3f normal = new Vector3f();
-    public final Vector4f color = new Vector4f();
+    public final Vector4f color = new Vector4f(1.0f);
 
     public Vertex(final Vector3fc position, final Vector3fc normal, final Vector4fc color) {
         this.position.set(position);
         this.normal.set(normal);
         this.color.set(color);
+    }
+
+    public Vertex(final Vector3fc position, final Vector3fc normal) {
+        this.position.set(position);
+        this.normal.set(normal);
     }
 
     public void get(final ByteBuffer buffer) {

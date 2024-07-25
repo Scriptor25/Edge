@@ -9,9 +9,10 @@ out vec4 vColor;
 
 uniform mat4 VIEW;
 uniform mat4 PROJ;
+uniform mat4 TRANSFORM;
 
 void main() {
-    gl_Position = PROJ * VIEW * POSITION;
-    vNormal = NORMAL;
+    gl_Position = PROJ * VIEW * TRANSFORM * POSITION;
+    vNormal = normalize(mat3(transpose(inverse(TRANSFORM))) * NORMAL);
     vColor = COLOR;
 }

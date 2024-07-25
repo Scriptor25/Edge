@@ -14,20 +14,20 @@ import org.yaml.snakeyaml.Yaml;
 
 import io.scriptor.engine.Mesh;
 
-public class World {
+public class WorldModel {
 
     private static Vector3i get(final List<Integer> xyz) {
         return new Vector3i(xyz.get(0), xyz.get(1), xyz.get(2));
     }
 
-    public static World load(final InputStream stream) {
+    public static WorldModel load(final InputStream stream) {
         final var yaml = new Yaml();
         final Map<String, Object> map = yaml.load(stream);
         return fromMap(map);
     }
 
     @SuppressWarnings("unchecked")
-    public static World fromMap(final Map<String, Object> map) {
+    public static WorldModel fromMap(final Map<String, Object> map) {
         final var id = (String) map.get("id");
         final var name = (String) map.get("name");
         final var boundsData = (List<Integer>) map.get("bounds");
@@ -37,9 +37,9 @@ public class World {
         final var spawn = get(spawnData);
         final var prisms = prismsData
                 .stream()
-                .map(World::get)
+                .map(WorldModel::get)
                 .toArray(Vector3i[]::new);
-        final var world = new World(id, name, bounds, spawn, prisms);
+        final var world = new WorldModel(id, name, bounds, spawn, prisms);
         final var voxels = (List<List<List<Integer>>>) map.get("voxels");
         for (int z = 0; z < bounds.z; ++z)
             for (int y = 0; y < bounds.y; ++y)
@@ -72,7 +72,7 @@ public class World {
     private final Vector3ic[] prisms;
     private final VoxelType[][][] voxels;
 
-    public World(final String id, final String name, final Vector3ic bounds, final Vector3ic spawn,
+    public WorldModel(final String id, final String name, final Vector3ic bounds, final Vector3ic spawn,
             final Vector3ic[] prisms) {
         this.id = id;
         this.name = name;

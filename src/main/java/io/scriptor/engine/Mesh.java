@@ -6,7 +6,9 @@ import static org.lwjgl.opengl.GL15.GL_ELEMENT_ARRAY_BUFFER;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 
 import org.joml.Vector3f;
@@ -15,7 +17,21 @@ import org.joml.Vector4fc;
 
 public class Mesh {
 
-    private final List<Model> uses = new Vector<>();
+    private static final Map<String, Mesh> instances = new HashMap<>();
+
+    public static Mesh get(final String id) {
+        if (!instances.containsKey(id))
+            throw new IllegalStateException(id);
+        return instances.get(id);
+    }
+
+    public static Mesh create(final String id) {
+        if (instances.containsKey(id))
+            throw new IllegalStateException(id);
+        final var instance = new Mesh();
+        instances.put(id, instance);
+        return instance;
+    }
 
     private final List<Vertex> vertices = new Vector<>();
     private final List<Integer> indices = new Vector<>();
@@ -23,8 +39,17 @@ public class Mesh {
     private final GLBuffer vbo = new GLBuffer(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW);
     private final GLBuffer ibo = new GLBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_DYNAMIC_DRAW);
 
-    public void use(final Model model) {
-        uses.add(model);
+    private int uses = 0;
+
+    private Mesh() {
+    }
+
+    public void use() {
+        ++uses;
+    }
+
+    public void drop() {
+        --uses;
     }
 
     public void clear() {
@@ -43,6 +68,10 @@ public class Mesh {
     public void add(final int... indices) {
         for (final var index : indices)
             add(index);
+    }
+
+    public void addQuad(final int... indices) {
+        add(indices[0], indices[1], indices[2], indices[2], indices[3], indices[0]);
     }
 
     public void addQuad(final Vertex... vertices) {
@@ -104,7 +133,9 @@ public class Mesh {
     }
 
     public void destroy() {
-        vbo.destroy();
-        ibo.destroy();
+        if (uses == 0) {
+            vbo.destroy();
+            ibo.destroy();
+        }
     }
 }

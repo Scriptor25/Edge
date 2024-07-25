@@ -20,8 +20,6 @@ import static org.lwjgl.opengl.GL11.glDrawElements;
 import static org.lwjgl.opengl.GL11.glEnable;
 import static org.lwjgl.opengl.GL11.glViewport;
 import static org.lwjgl.opengl.GL13.GL_MULTISAMPLE;
-import static org.lwjgl.opengl.GL20.GL_FRAGMENT_SHADER;
-import static org.lwjgl.opengl.GL20.GL_VERTEX_SHADER;
 import static org.lwjgl.opengl.GL20.glDisableVertexAttribArray;
 import static org.lwjgl.opengl.GL20.glEnableVertexAttribArray;
 import static org.lwjgl.opengl.GL20.glUniform1f;
@@ -33,6 +31,7 @@ import static org.lwjgl.opengl.GL43.GL_DEBUG_OUTPUT_SYNCHRONOUS;
 import static org.lwjgl.opengl.GL43.glDebugMessageCallback;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +41,8 @@ import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryUtil;
 
-import io.scriptor.engine.GLProgram.ShaderInfo;
+import io.scriptor.engine.component.Model;
+import io.scriptor.engine.component.Transform;
 
 public class Engine {
 
@@ -53,12 +53,9 @@ public class Engine {
 
     private final Window window;
 
-    private final Map<String, GLProgram> programs = new HashMap<>();
-    private final Map<String, Mesh> meshes = new HashMap<>();
-    private final Map<String, Material> materials = new HashMap<>();
-
-    private final List<Cycle> cycles = new Vector<>();
-    private final Map<Integer, KeyRecord> keyMap = new HashMap<>();
+    private final List<Runnable> tasks = new Vector<>();
+    private final Map<String, Cycle> cycles = new HashMap<>();
+    private final Map<Integer, KeyRecord> keys = new HashMap<>();
 
     private int width, height;
 
@@ -73,54 +70,56 @@ public class Engine {
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glDebugMessageCallback(this::onMessage, NULL);
 
-        programs.put("default", new GLProgram(
-                new ShaderInfo("shaders/default/vertex.glsl", true, GL_VERTEX_SHADER),
-                new ShaderInfo("shaders/default/fragment.glsl", true, GL_FRAGMENT_SHADER)));
-        programs.put("base", new GLProgram(
-                new ShaderInfo("shaders/base/vertex.glsl", true, GL_VERTEX_SHADER),
-                new ShaderInfo("shaders/base/fragment.glsl", true, GL_FRAGMENT_SHADER)));
-        programs.put("endframe", new GLProgram(
-                new ShaderInfo("shaders/endframe/vertex.glsl", true, GL_VERTEX_SHADER),
-                new ShaderInfo("shaders/endframe/fragment.glsl", true, GL_FRAGMENT_SHADER)));
-
-        keyMap.clear();
         for (int key = GLFW_KEY_SPACE; key < GLFW_KEY_LAST; ++key)
-            keyMap.put(key, new KeyRecord());
+            keys.put(key, new KeyRecord());
     }
 
-    public void register(final Cycle cycle) {
-        cycle.setEngine(this);
-        cycles.add(cycle);
+    public void schedule(final Runnable task) {
+        tasks.add(task);
     }
 
-    public Mesh createMesh(final String id) {
-        final var mesh = new Mesh();
-        meshes.put(id, mesh);
-        return mesh;
-    }
+    public <T extends Cycle> T addCycle(final String id, final Class<T> type, final Object... args) {
+        final var paramtypes = new Class<?>[args.length + 1];
+        final var params = new Object[args.length + 1];
+        for (int i = 0; i < params.length; ++i) {
+            paramtypes[i] = i == 0 ? Engine.class : args[i - 1].getClass();
+            params[i] = i == 0 ? this : args[i - 1];
+        }
 
-    public Material createMaterial(final String id, final String programName) {
-        final var material = new Material(programs.get(programName));
-        materials.put(id, material);
-        return material;
+        final T cycle;
+        try {
+            cycle = type
+                    .getConstructor(paramtypes)
+                    .newInstance(params);
+        } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
+                | NoSuchMethodException | SecurityException e) {
+            throw new RuntimeException(e);
+        }
+
+        schedule(() -> cycles.put(id, cycle));
+        return cycle;
     }
 
     public boolean getKey(final int key) {
-        if (!keyMap.containsKey(key))
+        if (!keys.containsKey(key))
             return false;
-        return keyMap.get(key).now;
+        return keys.get(key).now;
     }
 
     public boolean getKeyPress(final int key) {
-        if (!keyMap.containsKey(key))
+        if (!keys.containsKey(key))
             return false;
-        return !keyMap.get(key).previous && keyMap.get(key).now;
+        return !keys.get(key).previous && keys.get(key).now;
     }
 
     public boolean getKeyRelease(final int key) {
-        if (!keyMap.containsKey(key))
+        if (!keys.containsKey(key))
             return false;
-        return keyMap.get(key).previous && !keyMap.get(key).now;
+        return keys.get(key).previous && !keys.get(key).now;
+    }
+
+    public float getTime() {
+        return (float) glfwGetTime();
     }
 
     public void start() {
@@ -150,7 +149,7 @@ public class Engine {
     }
 
     public void onKey(final long window, final int key, final int scancode, final int action, final int mods) {
-        cycles.stream().forEach(cycle -> cycle.onKey(key, scancode, action, mods));
+        cycles.forEach((id, cycle) -> cycle.onKey(key, scancode, action, mods));
     }
 
     public void onSize(final long window, final int width, final int height) {
@@ -166,15 +165,27 @@ public class Engine {
     }
 
     private void onInit() {
-        cycles.stream().forEach(Cycle::onInit);
+        cycles
+                .values()
+                .stream()
+                .forEach(Cycle::onInit);
     }
 
     private void onStart() {
-        cycles.stream().forEach(Cycle::onStart);
+        cycles
+                .values()
+                .stream()
+                .forEach(Cycle::onStart);
     }
 
     private void onUpdate() {
-        for (final var entry : keyMap.entrySet()) {
+        while (!tasks.isEmpty()) {
+            final var task = tasks.get(0);
+            tasks.remove(0);
+            task.run();
+        }
+
+        for (final var entry : keys.entrySet()) {
             entry.getValue().previous = entry.getValue().now;
             entry.getValue().now = window.getKey(entry.getKey());
         }
@@ -191,20 +202,23 @@ public class Engine {
 
         final var aspect = (float) width / (float) height;
         final var view = new Matrix4f().lookAtLH(18, 14, 0, 6, 2, 12, 0, 1, 0);
-        // final var proj = new Matrix4f().perspectiveLH(org.joml.Math.toRadians(90),
-        // aspect, 0.3f, 100.0f);
         final var proj = new Matrix4f().orthoLH(-aspect * 10.0f, aspect * 10.0f, -10.0f, 10.0f, 0.3f, 100.0f);
 
-        for (final var material : materials.values()) {
+        cycles.forEach((id, cycle) -> cycle.stream(Model.class).forEach(model -> {
+            final var transform = cycle.hasComponent(Transform.class)
+                    ? cycle.getComponent(Transform.class).getMatrix()
+                    : new Matrix4f();
+
+            final var material = model.getMaterial();
             material.bind();
             material.getProgram()
                     .uniform("VIEW", loc -> glUniformMatrix4fv(loc, false, view.get(new float[16])))
                     .uniform("PROJ", loc -> glUniformMatrix4fv(loc, false, proj.get(new float[16])))
+                    .uniform("TRANSFORM", loc -> glUniformMatrix4fv(loc, false, transform.get(new float[16])))
                     .uniform("TIME", loc -> glUniform1f(loc, (float) glfwGetTime()))
                     .uniform("SUN_DIRECTION", loc -> glUniform3f(loc, -0.4f, -0.7f, 0.5f));
 
-            material.stream().forEach(model -> {
-                final var mesh = model.getMesh();
+            model.stream().forEach(mesh -> {
                 mesh.bind();
 
                 glEnableVertexAttribArray(0);
@@ -225,20 +239,26 @@ public class Engine {
             });
 
             material.unbind();
-        }
+        }));
 
-        cycles.stream().forEach(Cycle::onUpdate);
+        cycles
+                .values()
+                .stream()
+                .forEach(Cycle::onUpdate);
     }
 
     private void onStop() {
-        cycles.stream().forEach(Cycle::onStop);
+        cycles
+                .values()
+                .stream()
+                .forEach(Cycle::onStop);
     }
 
     private void onDestroy() {
-        cycles.stream().forEach(Cycle::onDestroy);
-
-        for (final var program : programs.values())
-            program.destroy();
+        cycles
+                .values()
+                .stream()
+                .forEach(Cycle::onDestroy);
 
         GL.destroy();
         window.destroy();

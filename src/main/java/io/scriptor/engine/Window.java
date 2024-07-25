@@ -34,13 +34,13 @@ public class Window {
 
         GLFWErrorCallback.createPrint(System.err).set();
         if (!glfwInit())
-            throw new IllegalStateException();
+            throw new RuntimeException();
 
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_SAMPLES, 4);
         m_Handle = glfwCreateWindow(width, height, title, NULL, NULL);
         if (m_Handle == NULL)
-            throw new IllegalStateException();
+            throw new RuntimeException();
 
         glfwSetKeyCallback(m_Handle, m_Engine::onKey);
         glfwSetWindowSizeCallback(m_Handle, m_Engine::onSize);

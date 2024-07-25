@@ -1,21 +1,43 @@
 package io.scriptor.engine;
 
-import java.util.List;
-import java.util.Vector;
-import java.util.stream.Stream;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Material {
 
-    private final List<Model> uses = new Vector<>();
+    private static final Map<String, Material> instances = new HashMap<>();
+
+    public static Material get(final String id) {
+        if (!instances.containsKey(id))
+            throw new IllegalStateException(id);
+        return instances.get(id);
+    }
+
+    public static Material create(final String id, final GLProgram program) {
+        if (instances.containsKey(id))
+            throw new IllegalStateException(id);
+        final var instance = new Material(program);
+        instances.put(id, instance);
+        return instance;
+    }
+
+    public static Material create(final String id, final String programId) {
+        return create(id, GLProgram.get(programId));
+    }
 
     private final GLProgram program;
+    private int uses = 0;
 
-    public Material(final GLProgram program) {
+    private Material(final GLProgram program) {
         this.program = program;
     }
 
-    public void use(final Model model) {
-        uses.add(model);
+    public void use() {
+        ++uses;
+    }
+
+    public void drop() {
+        --uses;
     }
 
     public void bind() {
@@ -26,11 +48,12 @@ public class Material {
         program.unbind();
     }
 
-    public Stream<Model> stream() {
-        return uses.stream();
-    }
-
     public GLProgram getProgram() {
         return program;
+    }
+
+    public void destroy() {
+        if (uses == 0)
+            program.destroy();
     }
 }

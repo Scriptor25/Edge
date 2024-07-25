@@ -1,0 +1,6 @@
+id: base
+shaders:
+  - path: shader/base/vertex.glsl
+    type: vertex
+  - path: shader/base/fragment.glsl
+    type: fragment
