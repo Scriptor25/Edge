@@ -11,10 +11,6 @@ import io.scriptor.engine.component.Transform;
 
 public class Prism extends Cycle {
 
-    private static float map(float x, float xmin, float xmax, float min, float max) {
-        return min + (max - min) * (xmax - x) / (xmax - xmin);
-    }
-
     private final Vector3ic position;
     private float prev;
 
