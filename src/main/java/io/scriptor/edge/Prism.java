@@ -44,9 +44,4 @@ public class Prism extends Cycle {
         transform.translation.set(position.x(), position.y() + dy, position.z());
         transform.rotation.rotateY(dt);
     }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-    }
 }

@@ -8,7 +8,7 @@ public abstract class Component {
     private final Engine engine;
     private final Cycle cycle;
 
-    public Component(final Cycle cycle) {
+    protected Component(final Cycle cycle) {
         this.engine = cycle.getEngine();
         this.cycle = cycle;
     }

@@ -53,16 +53,16 @@ public class WorldModel {
     }
 
     public enum VoxelType {
-        Base,
-        PulseNorth,
-        PulseSouth,
-        PulseEast,
-        PulseWest,
-        Shrink,
-        Magnify,
-        Push,
-        EndFrame,
-        EndCenter
+        BASE,
+        PULSE_NORTH,
+        PULSE_SOUTH,
+        PULSE_EAST,
+        PULSE_WEST,
+        SHRINK,
+        MAGNIFY,
+        PUSH,
+        ENDFRAME,
+        ENDCENTER
     }
 
     private final String id;
@@ -154,7 +154,7 @@ public class WorldModel {
                     final Vector4f color;
                     final Mesh baseMesh;
                     switch (type) {
-                        case Base:
+                        case BASE:
                             final var isEven = (x + z) % 2 == 0;
                             color = isEven ? baseColor : checkerColor;
                             baseMesh = mesh;

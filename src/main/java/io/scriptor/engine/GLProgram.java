@@ -15,7 +15,7 @@ import static org.lwjgl.opengl.GL20.glValidateProgram;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 
 import org.yaml.snakeyaml.Yaml;
 
@@ -31,12 +31,12 @@ public class GLProgram {
 
     public static GLProgram create(final String filename) {
         final var yaml = new Yaml();
-        final var info = yaml.loadAs(ClassLoader.getSystemResourceAsStream(filename), ProgramInfo.class);
-        if (instances.containsKey(info.id))
-            throw new IllegalStateException(info.id);
+        final var info = ProgramInfo.fromMap(yaml.load(ClassLoader.getSystemResourceAsStream(filename)));
+        if (instances.containsKey(info.getId()))
+            throw new IllegalStateException(info.getId());
 
-        final var instance = new GLProgram(info.shaders.toArray(ShaderInfo[]::new));
-        instances.put(info.id, instance);
+        final var instance = new GLProgram(info.getShaders().toArray(ShaderInfo[]::new));
+        instances.put(info.getId(), instance);
         return instance;
     }
 
@@ -61,8 +61,9 @@ public class GLProgram {
 
         for (final var shader : shaders)
             try {
-                addShader(handle, shader.getType(), readSource(shader.path));
-            } catch (IOException e) {
+                addShader(handle, shader.getType(), readSource(shader.getPath()));
+            } catch (final IOException e) {
+                e.printStackTrace();
             }
 
         glLinkProgram(handle);
@@ -74,7 +75,7 @@ public class GLProgram {
         return this;
     }
 
-    public GLProgram uniform(final String name, final Consumer<Integer> callback) {
+    public GLProgram uniform(final String name, final IntConsumer callback) {
         callback.accept(glGetUniformLocation(handle, name));
         return this;
     }

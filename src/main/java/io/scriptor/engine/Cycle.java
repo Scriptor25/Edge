@@ -38,7 +38,7 @@ public abstract class Cycle {
                     .newInstance(params);
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
                 | NoSuchMethodException | SecurityException e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException(e);
         }
 
         components
@@ -57,7 +57,7 @@ public abstract class Cycle {
 
     public <T extends Component> T getComponent(final Class<T> type, final int index) {
         if (!components.containsKey(type))
-            throw new RuntimeException();
+            throw new IllegalStateException();
         return type.cast(components.get(type).get(index));
     }
 
@@ -69,7 +69,7 @@ public abstract class Cycle {
                 return arty.getConstructor(int.class).newInstance(0);
             } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
                     | InvocationTargetException | NoSuchMethodException | SecurityException e) {
-                throw new RuntimeException(e);
+                throw new IllegalStateException(e);
             }
         return arty.cast(components.get(type).toArray());
     }

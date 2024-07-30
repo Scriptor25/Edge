@@ -6,10 +6,10 @@ import static org.lwjgl.opengl.GL15.GL_ELEMENT_ARRAY_BUFFER;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
@@ -33,8 +33,8 @@ public class Mesh {
         return instance;
     }
 
-    private final List<Vertex> vertices = new Vector<>();
-    private final List<Integer> indices = new Vector<>();
+    private final List<Vertex> vertices = new ArrayList<>();
+    private final List<Integer> indices = new ArrayList<>();
 
     private final GLBuffer vbo = new GLBuffer(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW);
     private final GLBuffer ibo = new GLBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_DYNAMIC_DRAW);

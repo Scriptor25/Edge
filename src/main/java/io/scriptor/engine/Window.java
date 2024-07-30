@@ -26,56 +26,53 @@ import org.lwjgl.glfw.GLFWErrorCallback;
 
 public class Window {
 
-    private final Engine m_Engine;
-    private final long m_Handle;
+    private final long handle;
 
     public Window(final Engine engine, final String title, final int width, final int height) {
-        m_Engine = engine;
-
         GLFWErrorCallback.createPrint(System.err).set();
         if (!glfwInit())
-            throw new RuntimeException();
+            throw new IllegalStateException();
 
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_SAMPLES, 4);
-        m_Handle = glfwCreateWindow(width, height, title, NULL, NULL);
-        if (m_Handle == NULL)
-            throw new RuntimeException();
+        handle = glfwCreateWindow(width, height, title, NULL, NULL);
+        if (handle == NULL)
+            throw new IllegalStateException();
 
-        glfwSetKeyCallback(m_Handle, m_Engine::onKey);
-        glfwSetWindowSizeCallback(m_Handle, m_Engine::onSize);
+        glfwSetKeyCallback(handle, engine::onKey);
+        glfwSetWindowSizeCallback(handle, engine::onSize);
 
-        glfwMakeContextCurrent(m_Handle);
+        glfwMakeContextCurrent(handle);
         glfwSwapInterval(GLFW_TRUE);
     }
 
     public void open() {
-        glfwSetWindowShouldClose(m_Handle, false);
+        glfwSetWindowShouldClose(handle, false);
     }
 
     public void close() {
-        glfwSetWindowShouldClose(m_Handle, true);
+        glfwSetWindowShouldClose(handle, true);
     }
 
     public boolean isOpen() {
-        return !glfwWindowShouldClose(m_Handle);
+        return !glfwWindowShouldClose(handle);
     }
 
     public boolean getKey(final int key) {
-        return glfwGetKey(m_Handle, key) == GLFW_PRESS;
+        return glfwGetKey(handle, key) == GLFW_PRESS;
     }
 
     public boolean update() {
-        if (glfwWindowShouldClose(m_Handle))
+        if (glfwWindowShouldClose(handle))
             return false;
-        glfwSwapBuffers(m_Handle);
+        glfwSwapBuffers(handle);
         glfwPollEvents();
         return true;
     }
 
     public void destroy() {
-        glfwFreeCallbacks(m_Handle);
-        glfwDestroyWindow(m_Handle);
+        glfwFreeCallbacks(handle);
+        glfwDestroyWindow(handle);
 
         glfwTerminate();
         glfwSetErrorCallback(null).free();

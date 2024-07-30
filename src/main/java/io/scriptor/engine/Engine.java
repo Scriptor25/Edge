@@ -32,10 +32,10 @@ import static org.lwjgl.opengl.GL43.glDebugMessageCallback;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL;
@@ -48,16 +48,35 @@ public class Engine {
 
     private static class KeyRecord {
 
-        public boolean now, previous;
+        private boolean now;
+        private boolean previous;
+
+        public void update(final boolean now) {
+            this.previous = this.now;
+            this.now = now;
+        }
+
+        public boolean down() {
+            return now;
+        }
+
+        public boolean press() {
+            return !previous && now;
+        }
+
+        public boolean release() {
+            return previous && !now;
+        }
     }
 
     private final Window window;
 
-    private final List<Runnable> tasks = new Vector<>();
+    private final List<Runnable> tasks = new ArrayList<>();
     private final Map<String, Cycle> cycles = new HashMap<>();
     private final Map<Integer, KeyRecord> keys = new HashMap<>();
 
-    private int width, height;
+    private int width;
+    private int height;
 
     public Engine(final String title, int width, int height) {
         window = new Window(this, title, width, height);
@@ -93,7 +112,7 @@ public class Engine {
                     .newInstance(params);
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
                 | NoSuchMethodException | SecurityException e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException(e);
         }
 
         schedule(() -> cycles.put(id, cycle));
@@ -103,19 +122,19 @@ public class Engine {
     public boolean getKey(final int key) {
         if (!keys.containsKey(key))
             return false;
-        return keys.get(key).now;
+        return keys.get(key).down();
     }
 
     public boolean getKeyPress(final int key) {
         if (!keys.containsKey(key))
             return false;
-        return !keys.get(key).previous && keys.get(key).now;
+        return keys.get(key).press();
     }
 
     public boolean getKeyRelease(final int key) {
         if (!keys.containsKey(key))
             return false;
-        return keys.get(key).previous && !keys.get(key).now;
+        return keys.get(key).release();
     }
 
     public float getTime() {
@@ -137,14 +156,10 @@ public class Engine {
         window.close();
     }
 
-    public void destroy() {
+    public void destroy() throws InterruptedException {
         stop();
-        try {
-            while (window.isOpen())
-                Thread.sleep(100);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        while (window.isOpen())
+            Thread.sleep(100);
         onDestroy();
     }
 
@@ -161,7 +176,6 @@ public class Engine {
     public void onMessage(int source, int type, int id, int severity, int length, long message, long userParam) {
         final var msg = MemoryUtil.memASCII(message);
         System.err.printf("[OpenGL] %s%n", msg);
-        return;
     }
 
     private void onInit() {
@@ -186,8 +200,7 @@ public class Engine {
         }
 
         for (final var entry : keys.entrySet()) {
-            entry.getValue().previous = entry.getValue().now;
-            entry.getValue().now = window.getKey(entry.getKey());
+            entry.getValue().update(window.getKey(entry.getKey()));
         }
 
         glEnable(GL_DEPTH_TEST);
@@ -225,9 +238,9 @@ public class Engine {
                 glEnableVertexAttribArray(1);
                 glEnableVertexAttribArray(2);
 
-                glVertexAttribPointer(0, 3, GL_FLOAT, false, Vertex.BYTES, 0);
-                glVertexAttribPointer(1, 3, GL_FLOAT, false, Vertex.BYTES, Float.BYTES * 3);
-                glVertexAttribPointer(2, 4, GL_FLOAT, false, Vertex.BYTES, Float.BYTES * 6);
+                glVertexAttribPointer(0, 3, GL_FLOAT, false, Vertex.BYTES, NULL);
+                glVertexAttribPointer(1, 3, GL_FLOAT, false, Vertex.BYTES, Float.BYTES * 3L);
+                glVertexAttribPointer(2, 4, GL_FLOAT, false, Vertex.BYTES, Float.BYTES * 6L);
 
                 glDrawElements(GL_TRIANGLES, mesh.count(), GL_UNSIGNED_INT, NULL);
 

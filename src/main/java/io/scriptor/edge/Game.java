@@ -15,7 +15,9 @@ import io.scriptor.engine.component.Model;
 
 public class Game extends Cycle {
 
-    private WorldModel world;
+    private static final String DEFAULT = "default";
+    private static final String RAINBOW = "rainbow";
+
     private int prismIndex = 0;
 
     public Game(final Engine engine) {
@@ -31,15 +33,15 @@ public class Game extends Cycle {
         super.onInit();
 
         GLProgram.create("shader/default.yaml");
-        Material.create("default", "default");
+        Material.create(DEFAULT, DEFAULT);
 
         GLProgram.create("shader/base.yaml");
         Material.create("base", "base");
 
         GLProgram.create("shader/rainbow.yaml");
-        Material.create("rainbow", "rainbow");
+        Material.create(RAINBOW, RAINBOW);
 
-        final var defaultMesh = Mesh.create("default");
+        final var defaultMesh = Mesh.create(DEFAULT);
         final var baseMesh = Mesh.create("base");
         final var endframeMesh = Mesh.create("endframe");
 
@@ -76,7 +78,7 @@ public class Game extends Cycle {
         cube.addQuad(7, 19, 22, 10);
         cube.apply();
 
-        world = WorldModel.load(ClassLoader.getSystemResourceAsStream("map/first_contact.yaml"));
+        final var world = WorldModel.load(ClassLoader.getSystemResourceAsStream("map/first_contact.yaml"));
         world.generate(
                 defaultMesh,
                 baseMesh,
@@ -90,9 +92,9 @@ public class Game extends Cycle {
                 endframeMesh,
                 null);
 
-        addComponent(Model.class, "default", "default");
+        addComponent(Model.class, DEFAULT, DEFAULT);
         addComponent(Model.class, "base", "base");
-        addComponent(Model.class, "rainbow", "endframe");
+        addComponent(Model.class, RAINBOW, "endframe");
 
         world
                 .getPrisms()
