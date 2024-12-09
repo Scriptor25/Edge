@@ -1,15 +1,15 @@
-package io.scriptor.engine;
+package io.scriptor.engine.data;
+
+import io.scriptor.engine.IYamlNode;
 
 import static org.lwjgl.opengl.GL20.GL_FRAGMENT_SHADER;
 import static org.lwjgl.opengl.GL20.GL_VERTEX_SHADER;
 
-import java.util.Map;
-
 public class ShaderInfo {
 
-    public static ShaderInfo fromMap(final Map<String, Object> map) {
-        final var path = (String) map.get("path");
-        final var type = (String) map.get("type");
+    public static ShaderInfo parse(final IYamlNode yaml) {
+        final var path = yaml.get("path").as(String.class).orElseThrow();
+        final var type = yaml.get("type").as(String.class).orElseThrow();
         return new ShaderInfo(path, type);
     }
 

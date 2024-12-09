@@ -1,30 +1,15 @@
 package io.scriptor.engine;
 
+import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.system.NativeResource;
+
+import java.util.Optional;
+
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
-import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
-import static org.lwjgl.glfw.GLFW.GLFW_SAMPLES;
-import static org.lwjgl.glfw.GLFW.GLFW_TRUE;
-import static org.lwjgl.glfw.GLFW.glfwCreateWindow;
-import static org.lwjgl.glfw.GLFW.glfwDefaultWindowHints;
-import static org.lwjgl.glfw.GLFW.glfwDestroyWindow;
-import static org.lwjgl.glfw.GLFW.glfwGetKey;
-import static org.lwjgl.glfw.GLFW.glfwInit;
-import static org.lwjgl.glfw.GLFW.glfwMakeContextCurrent;
-import static org.lwjgl.glfw.GLFW.glfwPollEvents;
-import static org.lwjgl.glfw.GLFW.glfwSetErrorCallback;
-import static org.lwjgl.glfw.GLFW.glfwSetKeyCallback;
-import static org.lwjgl.glfw.GLFW.glfwSetWindowShouldClose;
-import static org.lwjgl.glfw.GLFW.glfwSetWindowSizeCallback;
-import static org.lwjgl.glfw.GLFW.glfwSwapBuffers;
-import static org.lwjgl.glfw.GLFW.glfwSwapInterval;
-import static org.lwjgl.glfw.GLFW.glfwTerminate;
-import static org.lwjgl.glfw.GLFW.glfwWindowHint;
-import static org.lwjgl.glfw.GLFW.glfwWindowShouldClose;
+import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
-import org.lwjgl.glfw.GLFWErrorCallback;
-
-public class Window {
+public class Window implements IDestructible {
 
     private final long handle;
 
@@ -35,23 +20,20 @@ public class Window {
 
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_SAMPLES, 4);
+        glfwWindowHint(GLFW_CONTEXT_DEBUG, GLFW_TRUE);
         handle = glfwCreateWindow(width, height, title, NULL, NULL);
         if (handle == NULL)
             throw new IllegalStateException();
 
-        glfwSetKeyCallback(handle, engine::onKey);
-        glfwSetWindowSizeCallback(handle, engine::onSize);
+        Optional.ofNullable(glfwSetKeyCallback(handle, engine::onKey)).ifPresent(NativeResource::close);
+        Optional.ofNullable(glfwSetWindowSizeCallback(handle, engine::onSize)).ifPresent(NativeResource::close);
 
         glfwMakeContextCurrent(handle);
         glfwSwapInterval(GLFW_TRUE);
     }
 
-    public void open() {
-        glfwSetWindowShouldClose(handle, false);
-    }
-
-    public void close() {
-        glfwSetWindowShouldClose(handle, true);
+    public void open(final boolean open) {
+        glfwSetWindowShouldClose(handle, !open);
     }
 
     public boolean isOpen() {
@@ -70,11 +52,12 @@ public class Window {
         return true;
     }
 
+    @Override
     public void destroy() {
         glfwFreeCallbacks(handle);
         glfwDestroyWindow(handle);
 
         glfwTerminate();
-        glfwSetErrorCallback(null).free();
+        Optional.ofNullable(glfwSetErrorCallback(null)).ifPresent(NativeResource::close);
     }
 }

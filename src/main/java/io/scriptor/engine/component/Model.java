@@ -1,49 +1,51 @@
 package io.scriptor.engine.component;
 
+import io.scriptor.engine.Cycle;
+import io.scriptor.engine.Ref;
+import io.scriptor.engine.data.Material;
+import io.scriptor.engine.data.Mesh;
+
 import java.util.Arrays;
 import java.util.stream.Stream;
 
-import io.scriptor.engine.Cycle;
-import io.scriptor.engine.Material;
-import io.scriptor.engine.Mesh;
-
 public class Model extends Component {
 
-    private final Material material;
-    private final Mesh[] meshes;
+    private final Ref<Material> material;
+    private final Ref<Mesh>[] meshes;
 
-    public Model(final Cycle cycle, final Material material, final Mesh... meshes) {
+    @SafeVarargs
+    public Model(final Cycle cycle, final Ref<Material> material, final Ref<Mesh>... meshes) {
         super(cycle);
 
         this.material = material;
         this.meshes = meshes;
 
-        material.use();
-        for (final var mesh : meshes)
-            mesh.use();
+        this.material.use();
+        Arrays.stream(this.meshes).forEach(Ref::use);
     }
 
-    public Model(final Cycle cycle, final String materialId, final Mesh... meshes) {
+    @SuppressWarnings("unchecked")
+    public Model(final Cycle cycle, final String materialId, final Ref<Mesh>... meshes) {
         this(cycle, Material.get(materialId), meshes);
     }
 
-    public Model(final Cycle cycle, final String materialid, final String... meshIds) {
-        this(cycle, Material.get(materialid), Arrays.stream(meshIds).map(Mesh::get).toArray(Mesh[]::new));
+    public Model(final Cycle cycle, final String materialId, final String... meshIds) {
+        this(cycle, Material.get(materialId), Arrays.stream(meshIds).map(Mesh::get).<Ref<Mesh>>toArray(Ref[]::new));
     }
 
-    public Model(final Cycle cycle, final String materialid, final String meshId) {
-        this(cycle, Material.get(materialid), Mesh.get(meshId));
+    public Model(final Cycle cycle, final String materialId, final String meshId) {
+        this(cycle, Material.get(materialId), Mesh.get(meshId));
     }
 
-    public Material getMaterial() {
+    public Ref<Material> getMaterial() {
         return material;
     }
 
-    public Mesh getMesh() {
+    public Ref<Mesh> getMesh() {
         return meshes[0];
     }
 
-    public Mesh getMesh(final int index) {
+    public Ref<Mesh> getMesh(final int index) {
         return meshes[index];
     }
 
@@ -51,17 +53,13 @@ public class Model extends Component {
         return meshes.length;
     }
 
-    public Stream<Mesh> stream() {
+    public Stream<Ref<Mesh>> stream() {
         return Arrays.stream(meshes);
     }
 
     @Override
     public void destroy() {
         material.drop();
-        material.destroy();
-        for (final var mesh : meshes) {
-            mesh.drop();
-            mesh.destroy();
-        }
+        Arrays.stream(meshes).forEach(Ref::drop);
     }
 }

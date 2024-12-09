@@ -1,0 +1,10 @@
+id: cube
+path: model/cube.obj
+bounds:
+  min: [ 0.0, 0.0, 0.0 ]
+  max: [ 1.0, 1.0, 1.0 ]
+triangles: yes
+textures: yes
+normals: yes
+mesh-ids: [ cube ]
+material-ids: [ ]

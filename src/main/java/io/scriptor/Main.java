@@ -5,7 +5,7 @@ import io.scriptor.engine.Engine;
 
 public class Main {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
         final var engine = new Engine("Edge", 640, 320);
         engine.addCycle("edge", Game.class);
         engine.start();

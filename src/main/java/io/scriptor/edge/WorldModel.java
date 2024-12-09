@@ -1,53 +1,55 @@
 package io.scriptor.edge;
 
+import io.scriptor.engine.IYamlNode;
+import io.scriptor.engine.data.Mesh;
+import org.joml.*;
+
 import java.io.InputStream;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
-
-import org.joml.Vector3f;
-import org.joml.Vector3i;
-import org.joml.Vector3ic;
-import org.joml.Vector4f;
-import org.yaml.snakeyaml.Yaml;
-
-import io.scriptor.engine.Mesh;
 
 public class WorldModel {
 
-    private static Vector3i get(final List<Integer> xyz) {
-        return new Vector3i(xyz.get(0), xyz.get(1), xyz.get(2));
+    private static Vector3ic asVector(final IYamlNode node) {
+        final var xyz = node
+                .stream()
+                .map(e -> e.as(Integer.class).orElseThrow())
+                .toArray(Integer[]::new);
+        return new Vector3i(xyz[0], xyz[1], xyz[2]);
     }
 
     public static WorldModel load(final InputStream stream) {
-        final var yaml = new Yaml();
-        final Map<String, Object> map = yaml.load(stream);
-        return fromMap(map);
-    }
+        final var node = IYamlNode.load(stream);
 
-    @SuppressWarnings("unchecked")
-    public static WorldModel fromMap(final Map<String, Object> map) {
-        final var id = (String) map.get("id");
-        final var name = (String) map.get("name");
-        final var boundsData = (List<Integer>) map.get("bounds");
-        final var spawnData = (List<Integer>) map.get("spawn");
-        final var prismsData = (List<List<Integer>>) map.get("prisms");
-        final var bounds = get(boundsData);
-        final var spawn = get(spawnData);
-        final var prisms = prismsData
+        final var id = node.get("id").as(String.class).orElseThrow();
+        final var name = node.get("name").as(String.class).orElseThrow();
+
+        final var bounds = asVector(node.get("bounds"));
+        final var spawn = asVector(node.get("spawn"));
+        final var prisms = node.get("prisms")
                 .stream()
-                .map(WorldModel::get)
-                .toArray(Vector3i[]::new);
+                .map(WorldModel::asVector)
+                .toArray(Vector3ic[]::new);
+
         final var world = new WorldModel(id, name, bounds, spawn, prisms);
-        final var voxels = (List<List<List<Integer>>>) map.get("voxels");
-        for (int z = 0; z < bounds.z; ++z)
-            for (int y = 0; y < bounds.y; ++y)
-                for (int x = 0; x < bounds.x; ++x) {
-                    final var type = voxels.get(y).get(bounds.z - z - 1).get(x);
-                    if (type < 0)
-                        continue;
-                    world.set(x, y, z, VoxelType.values()[type]);
+
+        final var voxels = node.get("voxels")
+                .stream()
+                .map(y -> y
+                        .stream()
+                        .map(z -> z
+                                .stream()
+                                .map(x -> x.as(Integer.class).orElseThrow())
+                                .map(i -> i < 0 ? null : VoxelType.values()[i])
+                                .toArray(VoxelType[]::new))
+                        .toArray(VoxelType[][]::new))
+                .toArray(VoxelType[][][]::new);
+
+        for (int z = 0; z < bounds.z(); ++z)
+            for (int y = 0; y < bounds.y(); ++y)
+                for (int x = 0; x < bounds.x(); ++x) {
+                    final var type = voxels[y][bounds.z() - z - 1][x];
+                    world.set(x, y, z, type);
                 }
         return world;
     }
@@ -61,8 +63,8 @@ public class WorldModel {
         SHRINK,
         MAGNIFY,
         PUSH,
-        ENDFRAME,
-        ENDCENTER
+        END_FRAME,
+        END_CENTER
     }
 
     private final String id;
@@ -73,7 +75,7 @@ public class WorldModel {
     private final VoxelType[][][] voxels;
 
     public WorldModel(final String id, final String name, final Vector3ic bounds, final Vector3ic spawn,
-            final Vector3ic[] prisms) {
+                      final Vector3ic[] prisms) {
         this.id = id;
         this.name = name;
         this.bounds = bounds;
@@ -132,71 +134,118 @@ public class WorldModel {
             if (mesh != null)
                 mesh.clear();
 
-        final var right = new Vector3f(1.0f, 0.0f, 0.0f);
-        final var up = new Vector3f(0.0f, 1.0f, 0.0f);
-        final var upHalf = new Vector3f(0.0f, 0.5f, 0.0f);
-        final var forward = new Vector3f(0.0f, 0.0f, 1.0f);
-
         final var baseColor = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
         final var checkerColor = new Vector4f(0.95f, 0.95f, 0.95f, 1.0f);
 
         for (int z = 0; z < bounds.z(); ++z)
             for (int y = 0; y < bounds.y(); ++y)
-                for (int x = 0; x < bounds.x(); ++x) {
-                    final var type = get(x, y, z);
-                    if (type == null)
-                        continue;
-
-                    final var mesh = meshes[type.ordinal()] == null
-                            ? defaultMesh
-                            : meshes[type.ordinal()];
-
-                    final Vector4f color;
-                    final Mesh baseMesh;
-                    switch (type) {
-                        case BASE:
-                            final var isEven = (x + z) % 2 == 0;
-                            color = isEven ? baseColor : checkerColor;
-                            baseMesh = mesh;
-                            break;
-
-                        default:
-                            color = baseColor;
-                            baseMesh = meshes[0];
-                            break;
-                    }
-
-                    if (y == 0) {
-                        if (isAir(x - 1, y, z))
-                            baseMesh.addQuad(new Vector3f(x - 0.5f, y, z - 0.5f), upHalf, forward, baseColor);
-                        if (isAir(x + 1, y, z))
-                            baseMesh.addQuad(new Vector3f(x + 0.5f, y, z - 0.5f), forward, upHalf, baseColor);
-                        baseMesh.addQuad(new Vector3f(x - 0.5f, y, z - 0.5f), forward, right, baseColor);
-                        if (isAir(x, y + 1, z))
-                            mesh.addQuad(new Vector3f(x - 0.5f, y + 0.5f, z - 0.5f), right, forward, color);
-                        if (isAir(x, y, z - 1))
-                            baseMesh.addQuad(new Vector3f(x - 0.5f, y, z - 0.5f), right, upHalf, baseColor);
-                        if (isAir(x, y, z + 1))
-                            baseMesh.addQuad(new Vector3f(x - 0.5f, y, z + 0.5f), upHalf, right, baseColor);
-                    } else {
-                        if (isAir(x - 1, y, z))
-                            baseMesh.addQuad(new Vector3f(x - 0.5f, y - 0.5f, z - 0.5f), up, forward, baseColor);
-                        if (isAir(x + 1, y, z))
-                            baseMesh.addQuad(new Vector3f(x + 0.5f, y - 0.5f, z - 0.5f), forward, up, baseColor);
-                        if (isAir(x, y - 1, z))
-                            baseMesh.addQuad(new Vector3f(x - 0.5f, y - 0.5f, z - 0.5f), forward, right, baseColor);
-                        if (isAir(x, y + 1, z))
-                            mesh.addQuad(new Vector3f(x - 0.5f, y + 0.5f, z - 0.5f), right, forward, color);
-                        if (isAir(x, y, z - 1))
-                            baseMesh.addQuad(new Vector3f(x - 0.5f, y - 0.5f, z - 0.5f), right, up, baseColor);
-                        if (isAir(x, y, z + 1))
-                            baseMesh.addQuad(new Vector3f(x - 0.5f, y - 0.5f, z + 0.5f), up, right, baseColor);
-                    }
-                }
+                for (int x = 0; x < bounds.x(); ++x)
+                    generateBlock(x, y, z, defaultMesh, meshes, baseColor, checkerColor);
 
         defaultMesh.apply();
         for (final var mesh : meshes)
             if (mesh != null)
                 mesh.apply();
+    }
+
+    private void generateBlock(
+            final int x,
+            final int y,
+            final int z,
+            final Mesh defaultMesh,
+            final Mesh[] meshes,
+            final Vector4fc baseColor,
+            final Vector4fc checkerColor) {
+        final var type = get(x, y, z);
+        if (type == null)
+            return;
+
+        final var mesh = meshes[type.ordinal()] == null
+                ? defaultMesh
+                : meshes[type.ordinal()];
+
+        final Vector4fc color;
+        final Mesh baseMesh;
+        switch (type) {
+            case BASE:
+                final var isEven = (x + z) % 2 == 0;
+                color = isEven ? baseColor : checkerColor;
+                baseMesh = mesh;
+                break;
+
+            case PULSE_NORTH,
+                 PULSE_SOUTH,
+                 PULSE_EAST,
+                 PULSE_WEST,
+                 SHRINK,
+                 MAGNIFY,
+                 PUSH,
+                 END_FRAME,
+                 END_CENTER:
+            default:
+                color = baseColor;
+                baseMesh = meshes[0];
+                break;
+        }
+
+        generateBlock(new Vector3i(x, y, z), baseMesh, mesh, baseColor, color);
+    }
+
+    private void generateBlock(
+            final Vector3ic pos,
+            final Mesh baseMesh,
+            final Mesh mesh,
+            final Vector4fc baseColor,
+            final Vector4fc color) {
+        if (pos.y() == 0)
+            generateHalfBlock(pos, baseMesh, mesh, baseColor, color);
+        else
+            generateFullBlock(pos, baseMesh, mesh, baseColor, color);
+    }
+
+    private static final Vector3fc DX = new Vector3f(0.5f, 0.0f, 0.0f);
+    private static final Vector3fc DY = new Vector3f(0.0f, 0.5f, 0.0f);
+    private static final Vector3fc DZ = new Vector3f(0.0f, 0.0f, 0.5f);
+    public static final Vector3fc RIGHT = new Vector3f(1.0f, 0.0f, 0.0f);
+    public static final Vector3fc UP = new Vector3f(0.0f, 1.0f, 0.0f);
+    public static final Vector3fc FORWARD = new Vector3f(0.0f, 0.0f, 1.0f);
+
+    private void generateHalfBlock(
+            final Vector3ic pos,
+            final Mesh baseMesh,
+            final Mesh mesh,
+            final Vector4fc baseColor,
+            final Vector4fc color) {
+        if (isAir(pos.x() - 1, pos.y(), pos.z()))
+            baseMesh.addQuad(new Vector3f(pos).sub(DX).sub(DZ), DY, FORWARD, baseColor);
+        if (isAir(pos.x() + 1, pos.y(), pos.z()))
+            baseMesh.addQuad(new Vector3f(pos).add(DX).sub(DZ), FORWARD, DY, baseColor);
+        baseMesh.addQuad(new Vector3f(pos).sub(DX).sub(DZ), FORWARD, RIGHT, baseColor);
+        if (isAir(pos.x(), pos.y() + 1, pos.z()))
+            mesh.addQuad(new Vector3f(pos).sub(DX).add(DY).sub(DZ), RIGHT, FORWARD, color);
+        if (isAir(pos.x(), pos.y(), pos.z() - 1))
+            baseMesh.addQuad(new Vector3f(pos).sub(DX).sub(DZ), RIGHT, DY, baseColor);
+        if (isAir(pos.x(), pos.y(), pos.z() + 1))
+            baseMesh.addQuad(new Vector3f(pos).sub(DX).add(DZ), DY, RIGHT, baseColor);
+    }
+
+    private void generateFullBlock(
+            final Vector3ic pos,
+            final Mesh baseMesh,
+            final Mesh mesh,
+            final Vector4fc baseColor,
+            final Vector4fc color) {
+        if (isAir(pos.x() - 1, pos.y(), pos.z()))
+            baseMesh.addQuad(new Vector3f(pos).sub(DX).sub(DY).sub(DZ), UP, FORWARD, baseColor);
+        if (isAir(pos.x() + 1, pos.y(), pos.z()))
+            baseMesh.addQuad(new Vector3f(pos).add(DX).sub(DY).sub(DZ), FORWARD, UP, baseColor);
+        if (isAir(pos.x(), pos.y() - 1, pos.z()))
+            baseMesh.addQuad(new Vector3f(pos).sub(DX).sub(DY).sub(DZ), FORWARD, RIGHT, baseColor);
+        if (isAir(pos.x(), pos.y() + 1, pos.z()))
+            mesh.addQuad(new Vector3f(pos).sub(DX).add(DY).sub(DZ), RIGHT, FORWARD, color);
+        if (isAir(pos.x(), pos.y(), pos.z() - 1))
+            baseMesh.addQuad(new Vector3f(pos).sub(DX).sub(DY).sub(DZ), RIGHT, UP, baseColor);
+        if (isAir(pos.x(), pos.y(), pos.z() + 1))
+            baseMesh.addQuad(new Vector3f(pos).sub(DX).sub(DY).add(DZ), UP, RIGHT, baseColor);
     }
 }

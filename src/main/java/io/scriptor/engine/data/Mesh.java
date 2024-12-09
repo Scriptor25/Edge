@@ -1,36 +1,27 @@
-package io.scriptor.engine;
+package io.scriptor.engine.data;
 
-import static org.lwjgl.opengl.GL15.GL_ARRAY_BUFFER;
-import static org.lwjgl.opengl.GL15.GL_DYNAMIC_DRAW;
-import static org.lwjgl.opengl.GL15.GL_ELEMENT_ARRAY_BUFFER;
-
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import io.scriptor.engine.IDestructible;
+import io.scriptor.engine.Ref;
+import io.scriptor.engine.gl.GLBuffer;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 import org.joml.Vector4fc;
 
-public class Mesh {
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.List;
 
-    private static final Map<String, Mesh> instances = new HashMap<>();
+import static org.lwjgl.opengl.GL15.*;
 
-    public static Mesh get(final String id) {
-        if (!instances.containsKey(id))
-            throw new IllegalStateException(id);
-        return instances.get(id);
+public class Mesh implements IDestructible {
+
+    public static Ref<Mesh> get(final String id) {
+        return Ref.get(Mesh.class, id);
     }
 
-    public static Mesh create(final String id) {
-        if (instances.containsKey(id))
-            throw new IllegalStateException(id);
-        final var instance = new Mesh();
-        instances.put(id, instance);
-        return instance;
+    public static Ref<Mesh> create(final String id) {
+        return Ref.create(Mesh.class, id, new Mesh());
     }
 
     private final List<Vertex> vertices = new ArrayList<>();
@@ -39,17 +30,7 @@ public class Mesh {
     private final GLBuffer vbo = new GLBuffer(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW);
     private final GLBuffer ibo = new GLBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_DYNAMIC_DRAW);
 
-    private int uses = 0;
-
     private Mesh() {
-    }
-
-    public void use() {
-        ++uses;
-    }
-
-    public void drop() {
-        --uses;
     }
 
     public void clear() {
@@ -100,7 +81,7 @@ public class Mesh {
         final var vb = ByteBuffer
                 .allocateDirect(Vertex.BYTES * vertices.size())
                 .order(ByteOrder.nativeOrder());
-        vertices.stream().forEach(vertex -> vertex.get(vb));
+        vertices.forEach(vertex -> vertex.get(vb));
         vb.rewind();
         vbo
                 .bind()
@@ -110,7 +91,7 @@ public class Mesh {
         final var ib = ByteBuffer
                 .allocateDirect(Integer.BYTES * indices.size())
                 .order(ByteOrder.nativeOrder());
-        indices.stream().forEach(ib::putInt);
+        indices.forEach(ib::putInt);
         ib.rewind();
         ibo
                 .bind()
@@ -132,10 +113,9 @@ public class Mesh {
         return indices.size();
     }
 
+    @Override
     public void destroy() {
-        if (uses == 0) {
-            vbo.destroy();
-            ibo.destroy();
-        }
+        ibo.destroy();
+        vbo.destroy();
     }
 }

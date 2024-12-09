@@ -1,5 +1,7 @@
 package io.scriptor.engine;
 
+import io.scriptor.engine.component.Component;
+
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.List;
@@ -7,11 +9,9 @@ import java.util.Map;
 import java.util.Vector;
 import java.util.stream.Stream;
 
-import io.scriptor.engine.component.Component;
-
 public abstract class Cycle {
 
-    private boolean isInit = false;
+    private boolean isStart = false;
     private final Engine engine;
     private final Map<Class<?>, List<Component>> components = new HashMap<>();
 
@@ -24,20 +24,24 @@ public abstract class Cycle {
     }
 
     public <T extends Component> T addComponent(final Class<T> type, final Object... args) {
-        final var paramtypes = new Class<?>[args.length + 1];
+        final var paramTypes = new Class<?>[args.length + 1];
         final var params = new Object[args.length + 1];
         for (int i = 0; i < params.length; ++i) {
-            paramtypes[i] = i == 0 ? Cycle.class : args[i - 1].getClass();
+            paramTypes[i] = i == 0 ? Cycle.class : args[i - 1].getClass();
             params[i] = i == 0 ? this : args[i - 1];
         }
 
         final T component;
         try {
             component = type
-                    .getConstructor(paramtypes)
+                    .getConstructor(paramTypes)
                     .newInstance(params);
-        } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
-                | NoSuchMethodException | SecurityException e) {
+        } catch (final InstantiationException
+                       | IllegalAccessException
+                       | IllegalArgumentException
+                       | InvocationTargetException
+                       | NoSuchMethodException
+                       | SecurityException e) {
             throw new IllegalStateException(e);
         }
 
@@ -68,7 +72,7 @@ public abstract class Cycle {
             try {
                 return arty.getConstructor(int.class).newInstance(0);
             } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-                    | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+                     | InvocationTargetException | NoSuchMethodException | SecurityException e) {
                 throw new IllegalStateException(e);
             }
         return arty.cast(components.get(type).toArray());
@@ -78,21 +82,16 @@ public abstract class Cycle {
     public <T extends Component> Stream<T> stream(final Class<T> type) {
         if (!components.containsKey(type))
             return Stream.empty();
-        return Stream.class.cast(components.get(type).stream());
-    }
-
-    public void onInit() {
-        isInit = true;
+        return (Stream<T>) components.get(type).stream();
     }
 
     public void onStart() {
-        if (!isInit)
-            onInit();
+        isStart = true;
     }
 
     public void onUpdate() {
-        if (!isInit)
-            onInit();
+        if (!isStart)
+            onStart();
     }
 
     public void onKey(final int key, final int scancode, final int action, final int mods) {

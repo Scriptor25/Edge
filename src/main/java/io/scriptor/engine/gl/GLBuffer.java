@@ -1,13 +1,12 @@
-package io.scriptor.engine;
+package io.scriptor.engine.gl;
 
-import static org.lwjgl.opengl.GL15.glBindBuffer;
-import static org.lwjgl.opengl.GL15.glBufferData;
-import static org.lwjgl.opengl.GL15.glDeleteBuffers;
-import static org.lwjgl.opengl.GL15.glGenBuffers;
+import io.scriptor.engine.IDestructible;
 
 import java.nio.ByteBuffer;
 
-public class GLBuffer {
+import static org.lwjgl.opengl.GL15.*;
+
+public class GLBuffer implements IDestructible {
 
     private final int handle;
     private final int target;
@@ -33,6 +32,7 @@ public class GLBuffer {
         glBindBuffer(target, 0);
     }
 
+    @Override
     public void destroy() {
         glDeleteBuffers(handle);
     }

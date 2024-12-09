@@ -2,8 +2,9 @@ package io.scriptor.engine.component;
 
 import io.scriptor.engine.Cycle;
 import io.scriptor.engine.Engine;
+import io.scriptor.engine.IDestructible;
 
-public abstract class Component {
+public abstract class Component implements IDestructible {
 
     private final Engine engine;
     private final Cycle cycle;
@@ -21,6 +22,7 @@ public abstract class Component {
         return cycle;
     }
 
+    @Override
     public void destroy() {
     }
 }

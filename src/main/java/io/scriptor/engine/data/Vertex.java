@@ -1,4 +1,4 @@
-package io.scriptor.engine;
+package io.scriptor.engine.data;
 
 import java.nio.ByteBuffer;
 
