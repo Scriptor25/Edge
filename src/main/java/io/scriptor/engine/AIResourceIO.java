@@ -14,7 +14,7 @@ import static org.lwjgl.system.MemoryUtil.*;
 public class AIResourceIO implements IDestructible {
 
     private final AIFileIO aiFileIO;
-    private final Map<Long, ByteBuffer> aiFiles = new HashMap<>();
+    private final Map<AIFile, ByteBuffer> aiFiles = new HashMap<>();
 
     public AIResourceIO() {
         aiFileIO = AIFileIO.create();
@@ -24,8 +24,9 @@ public class AIResourceIO implements IDestructible {
             return open(filename, stream -> {
                 final var data = stream.readAllBytes();
 
-                final var buffer = memAlloc(data.length).put(data);
-                buffer.flip();
+                final var buffer = memAlloc(data.length)
+                        .put(data)
+                        .flip();
 
                 final var aiFile = AIFile.create();
                 aiFile.ReadProc((pFile, pBuffer, size, count) -> {
@@ -52,14 +53,14 @@ public class AIResourceIO implements IDestructible {
                 });
                 aiFile.FileSizeProc(pFile -> buffer.limit());
 
-                aiFiles.put(aiFile.address(), buffer);
+                aiFiles.put(aiFile, buffer);
                 return aiFile.address();
             }).or(NULL);
         });
         aiFileIO.CloseProc((pFileIO, pFile) -> {
-            if (pFile == NULL || !aiFiles.containsKey(pFile)) return;
-            memFree(aiFiles.get(pFile));
-            AIFile.create(pFile).close();
+            if (pFile == NULL) return;
+            final var aiFile = AIFile.create(pFile);
+            memFree(aiFiles.get(aiFile));
         });
     }
 

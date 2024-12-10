@@ -101,7 +101,6 @@ public class ModelLoader {
                     pAnisotropyFactor[0],
                     pRefractionIndex[0]
             );
-            System.out.println(info);
         }
     }
 
@@ -139,8 +138,6 @@ public class ModelLoader {
             }
 
             final var info = new MeshInfo(name, vertices, indices);
-            System.out.println(info);
-
             info.create();
         }
     }

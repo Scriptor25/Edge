@@ -1,6 +1,5 @@
 id: first_contact
 name: 1st contact
-bounds: [13, 4, 25]
 spawn: [2, 50, 3]
 prisms:
   - [5, 1, 3]

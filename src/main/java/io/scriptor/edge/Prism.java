@@ -5,25 +5,24 @@ import io.scriptor.engine.Engine;
 import io.scriptor.engine.component.Model;
 import io.scriptor.engine.component.Transform;
 import org.joml.Math;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
 import org.joml.Vector3i;
-import org.joml.Vector3ic;
 
 public class Prism extends Cycle {
 
-    private final Vector3ic position;
+    private final Vector3fc position;
 
     public Prism(final Engine engine, final Vector3i position) {
         super(engine);
-        this.position = position;
+        this.position = new Vector3f(position);
     }
 
     @Override
     public void onStart() {
         super.onStart();
 
-        final var transform = addComponent(Transform.class);
-        transform.getScale().set(0.4f);
-
+        addComponent(Transform.class).setScale(0.4f);
         addComponent(Model.class, "rainbow", "cube");
     }
 
@@ -35,7 +34,8 @@ public class Prism extends Cycle {
         final var transform = getComponent(Transform.class);
 
         final var dy = Math.sin(getEngine().getTime()) * 0.2f;
-        transform.getTranslation().set(position.x(), position.y() + dy, position.z());
-        transform.getRotation().rotateY(dt);
+        transform
+                .setTranslation(position.add(0, dy, 0, new Vector3f()))
+                .rotate(dt, new Vector3f(0, 1, 0));
     }
 }

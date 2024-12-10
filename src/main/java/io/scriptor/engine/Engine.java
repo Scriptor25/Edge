@@ -104,6 +104,10 @@ public class Engine implements IDestructible {
         return cycle;
     }
 
+    public <T extends Cycle> T getCycle(final String id, final Class<T> type) {
+        return type.cast(cycles.get(id));
+    }
+
     public boolean getKey(final int key) {
         if (!keys.containsKey(key))
             return false;
@@ -204,19 +208,21 @@ public class Engine implements IDestructible {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        final var camera = cycles
+        final var cam = cycles
                 .values()
                 .stream()
                 .filter(cycle -> cycle.hasComponent(Camera.class))
-                .map(cycle -> cycle.getComponent(Camera.class))
                 .findFirst();
-        if (camera.isEmpty()) {
+        if (cam.isEmpty()) {
             cycles.values().forEach(Cycle::onUpdate);
             return;
         }
 
-        final var view = new Matrix4f().lookAtLH(18, 14, 0, 6, 2, 12, 0, 1, 0);
-        final var proj = camera.get().getMatrix();
+        final var cTransform = cam.get().getComponent(Transform.class);
+        final var cCamera = cam.get().getComponent(Camera.class);
+
+        final var view = cTransform.getInverse();
+        final var proj = cCamera.getMatrix();
 
         cycles.forEach((id, cycle) -> cycle.stream(Model.class).forEach(model -> {
             final var transform = cycle.hasComponent(Transform.class)
