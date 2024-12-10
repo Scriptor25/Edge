@@ -2,5 +2,5 @@ id: pulse_north
 shaders:
   - path: shader/pulse/vertex.glsl
     type: vertex
-  - path: shader/base/fragment.glsl
+  - path: shader/pulse/fragment.glsl
     type: fragment

@@ -56,8 +56,26 @@ public class GLProgram implements IDestructible {
         for (final var shader : shaders)
             addShader(handle, shader.type(), readSource(shader.path()));
 
+        final var pStatus = new int[1];
+
         glLinkProgram(handle);
+
+        glGetProgramiv(handle, GL_LINK_STATUS, pStatus);
+        if (pStatus[0] != GL_TRUE) {
+            final var message = glGetProgramInfoLog(handle);
+            System.err.println(message);
+            glDeleteProgram(handle);
+            return;
+        }
+
         glValidateProgram(handle);
+
+        glGetProgramiv(handle, GL_VALIDATE_STATUS, pStatus);
+        if (pStatus[0] != GL_TRUE) {
+            final var message = glGetProgramInfoLog(handle);
+            System.err.println(message);
+            glDeleteProgram(handle);
+        }
     }
 
     public GLProgram bind() {
