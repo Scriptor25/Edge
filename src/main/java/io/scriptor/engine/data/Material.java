@@ -10,7 +10,7 @@ public class Material implements IDestructible {
         return Ref.get(Material.class, id);
     }
 
-    public static Ref<Material> create(final String id, final GLProgram program) {
+    public static Ref<Material> create(final String id, final Ref<GLProgram> program) {
         return Ref.create(Material.class, id, new Material(program));
     }
 
@@ -18,26 +18,27 @@ public class Material implements IDestructible {
         return create(id, GLProgram.get(programId));
     }
 
-    private final GLProgram program;
+    private final Ref<GLProgram> program;
 
-    private Material(final GLProgram program) {
+    private Material(final Ref<GLProgram> program) {
         this.program = program;
+        this.program.use();
     }
 
     public void bind() {
-        program.bind();
+        program.ok(GLProgram::bind);
     }
 
     public void unbind() {
-        program.unbind();
+        program.ok(GLProgram::unbind);
     }
 
-    public GLProgram getProgram() {
+    public Ref<GLProgram> getProgram() {
         return program;
     }
 
     @Override
     public void destroy() {
-        program.destroy();
+        program.drop();
     }
 }

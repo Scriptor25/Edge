@@ -54,7 +54,7 @@ public class AIResourceIO implements IDestructible {
 
                 aiFiles.put(aiFile.address(), buffer);
                 return aiFile.address();
-            }).orElse(NULL);
+            }).or(NULL);
         });
         aiFileIO.CloseProc((pFileIO, pFile) -> {
             if (pFile == NULL || !aiFiles.containsKey(pFile)) return;

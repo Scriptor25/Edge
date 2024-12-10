@@ -8,7 +8,7 @@ public record ProgramInfo(String id, ShaderInfo[] shaders) {
         final var id = node
                 .get("id")
                 .as(String.class)
-                .orElseThrow();
+                .get();
         final var shaders = node
                 .get("shaders")
                 .stream()

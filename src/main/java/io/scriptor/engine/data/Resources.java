@@ -1,5 +1,8 @@
 package io.scriptor.engine.data;
 
+import io.scriptor.engine.Result;
+
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.Optional;
 
@@ -25,13 +28,14 @@ public class Resources {
                     try (stream) {
                         callback.apply(stream);
                     } catch (final Exception e) {
+                        e.printStackTrace(System.err);
                     }
                 });
     }
 
-    public static <T> Optional<T> open(final String name, final OpenCallback<T> callback) {
-        return Optional
-                .ofNullable(ClassLoader.getSystemResourceAsStream(name))
+    public static <T> Result<T> open(final String name, final OpenCallback<T> callback) {
+        return Result
+                .of(ClassLoader.getSystemResourceAsStream(name), new FileNotFoundException(name))
                 .map(stream -> {
                     try (stream) {
                         return callback.apply(stream);

@@ -90,9 +90,12 @@ public interface IYamlNode extends Iterable<IYamlNode> {
         }
 
         @Override
-        public <E> Optional<E> as(final Class<E> type) {
-            if (!type.isInstance(data)) return Optional.empty();
-            return Optional.of(type.cast(data));
+        public <E> Result<E> as(final Class<E> type) {
+            try {
+                return Result.of(type.cast(data));
+            } catch (ClassCastException e) {
+                return Result.err(e);
+            }
         }
     }
 
@@ -114,8 +117,8 @@ public interface IYamlNode extends Iterable<IYamlNode> {
         return new EmptyNode(null);
     }
 
-    default <E> Optional<E> as(final Class<E> type) {
-        return Optional.empty();
+    default <E> Result<E> as(final Class<E> type) {
+        return Result.err(new ClassCastException("cannot cast value of non-data node to %s".formatted(type)));
     }
 
     default Stream<IYamlNode> stream() {

@@ -225,12 +225,12 @@ public class Engine implements IDestructible {
 
             model.getMaterial().ok(material -> {
                 material.bind();
-                material.getProgram()
+                material.getProgram().ok(program -> program
                         .uniform("VIEW", loc -> glUniformMatrix4fv(loc, false, view.get(new float[16])))
                         .uniform("PROJ", loc -> glUniformMatrix4fv(loc, false, proj.get(new float[16])))
                         .uniform("TRANSFORM", loc -> glUniformMatrix4fv(loc, false, transform.get(new float[16])))
                         .uniform("TIME", loc -> glUniform1f(loc, (float) glfwGetTime()))
-                        .uniform("SUN_DIRECTION", loc -> glUniform3f(loc, -0.4f, -0.7f, 0.5f));
+                        .uniform("SUN_DIRECTION", loc -> glUniform3f(loc, -0.4f, -0.7f, 0.5f)));
 
                 model
                         .stream()
@@ -242,16 +242,24 @@ public class Engine implements IDestructible {
                             glEnableVertexAttribArray(0);
                             glEnableVertexAttribArray(1);
                             glEnableVertexAttribArray(2);
+                            glEnableVertexAttribArray(3);
 
-                            glVertexAttribPointer(0, 3, GL_FLOAT, false, Vertex.BYTES, NULL);
-                            glVertexAttribPointer(1, 3, GL_FLOAT, false, Vertex.BYTES, Float.BYTES * 3L);
-                            glVertexAttribPointer(2, 4, GL_FLOAT, false, Vertex.BYTES, Float.BYTES * 6L);
+                            var offset = NULL;
+                            glVertexAttribPointer(0, 3, GL_FLOAT, false, Vertex.BYTES, offset);
+                            offset += Float.BYTES * 3L;
+                            glVertexAttribPointer(1, 2, GL_FLOAT, false, Vertex.BYTES, offset);
+                            offset += Float.BYTES * 2L;
+                            glVertexAttribPointer(2, 3, GL_FLOAT, false, Vertex.BYTES, offset);
+                            offset += Float.BYTES * 3L;
+                            glVertexAttribPointer(3, 4, GL_FLOAT, false, Vertex.BYTES, offset);
+                            offset += Float.BYTES * 4L;
 
                             glDrawElements(GL_TRIANGLES, mesh.count(), GL_UNSIGNED_INT, NULL);
 
                             glDisableVertexAttribArray(0);
                             glDisableVertexAttribArray(1);
                             glDisableVertexAttribArray(2);
+                            glDisableVertexAttribArray(3);
 
                             mesh.unbind();
                         });

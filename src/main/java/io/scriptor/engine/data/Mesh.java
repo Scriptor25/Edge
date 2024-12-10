@@ -3,6 +3,7 @@ package io.scriptor.engine.data;
 import io.scriptor.engine.IDestructible;
 import io.scriptor.engine.Ref;
 import io.scriptor.engine.gl.GLBuffer;
+import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 import org.joml.Vector4fc;
@@ -42,6 +43,11 @@ public class Mesh implements IDestructible {
         vertices.add(vertex);
     }
 
+    public void add(final Vertex... vertices) {
+        for (final var vertex : vertices)
+            add(vertex);
+    }
+
     public void add(final int index) {
         indices.add(index);
     }
@@ -51,17 +57,6 @@ public class Mesh implements IDestructible {
             add(index);
     }
 
-    public void addQuad(final int... indices) {
-        add(indices[0], indices[1], indices[2], indices[2], indices[3], indices[0]);
-    }
-
-    public void addQuad(final Vertex... vertices) {
-        final var first = this.vertices.size();
-        for (final var vertex : vertices)
-            add(vertex);
-        add(first, first + 1, first + 2, first + 2, first + 3, first);
-    }
-
     public void addQuad(final Vector3fc origin, final Vector3fc edge0, final Vector3fc edge1, final Vector4fc color) {
         final var first = vertices.size();
 
@@ -69,10 +64,10 @@ public class Mesh implements IDestructible {
         final var ne1 = edge1.normalize(new Vector3f());
         final var normal = ne0.cross(ne1, new Vector3f());
 
-        add(new Vertex(origin, normal, color));
-        add(new Vertex(origin.add(edge0, new Vector3f()), normal, color));
-        add(new Vertex(origin.add(edge0, new Vector3f()).add(edge1), normal, color));
-        add(new Vertex(origin.add(edge1, new Vector3f()), normal, color));
+        add(new Vertex(origin, new Vector2f(0, 0), normal, color));
+        add(new Vertex(origin.add(edge0, new Vector3f()), new Vector2f(0, 1), normal, color));
+        add(new Vertex(origin.add(edge0, new Vector3f()).add(edge1), new Vector2f(1, 1), normal, color));
+        add(new Vertex(origin.add(edge1, new Vector3f()), new Vector2f(1, 0), normal, color));
 
         add(first, first + 1, first + 2, first + 2, first + 3, first);
     }
@@ -82,7 +77,7 @@ public class Mesh implements IDestructible {
                 .allocateDirect(Vertex.BYTES * vertices.size())
                 .order(ByteOrder.nativeOrder());
         vertices.forEach(vertex -> vertex.get(vb));
-        vb.rewind();
+        vb.flip();
         vbo
                 .bind()
                 .data(vb)
@@ -92,7 +87,7 @@ public class Mesh implements IDestructible {
                 .allocateDirect(Integer.BYTES * indices.size())
                 .order(ByteOrder.nativeOrder());
         indices.forEach(ib::putInt);
-        ib.rewind();
+        ib.flip();
         ibo
                 .bind()
                 .data(ib)

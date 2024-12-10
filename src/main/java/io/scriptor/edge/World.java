@@ -8,30 +8,30 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
-public class WorldModel {
+public class World {
 
     private static Vector3ic asVector(final IYamlNode node) {
         final var xyz = node
                 .stream()
-                .map(e -> e.as(Integer.class).orElseThrow())
+                .map(e -> e.as(Integer.class).get())
                 .toArray(Integer[]::new);
         return new Vector3i(xyz[0], xyz[1], xyz[2]);
     }
 
-    public static WorldModel load(final InputStream stream) {
+    public static World load(final InputStream stream) {
         final var node = IYamlNode.load(stream);
 
-        final var id = node.get("id").as(String.class).orElseThrow();
-        final var name = node.get("name").as(String.class).orElseThrow();
+        final var id = node.get("id").as(String.class).get();
+        final var name = node.get("name").as(String.class).get();
 
         final var bounds = asVector(node.get("bounds"));
         final var spawn = asVector(node.get("spawn"));
         final var prisms = node.get("prisms")
                 .stream()
-                .map(WorldModel::asVector)
+                .map(World::asVector)
                 .toArray(Vector3ic[]::new);
 
-        final var world = new WorldModel(id, name, bounds, spawn, prisms);
+        final var world = new World(id, name, bounds, spawn, prisms);
 
         final var voxels = node.get("voxels")
                 .stream()
@@ -39,7 +39,7 @@ public class WorldModel {
                         .stream()
                         .map(z -> z
                                 .stream()
-                                .map(x -> x.as(Integer.class).orElseThrow())
+                                .map(x -> x.as(Integer.class).get())
                                 .map(i -> i < 0 ? null : VoxelType.values()[i])
                                 .toArray(VoxelType[]::new))
                         .toArray(VoxelType[][]::new))
@@ -74,8 +74,8 @@ public class WorldModel {
     private final Vector3ic[] prisms;
     private final VoxelType[][][] voxels;
 
-    public WorldModel(final String id, final String name, final Vector3ic bounds, final Vector3ic spawn,
-                      final Vector3ic[] prisms) {
+    public World(final String id, final String name, final Vector3ic bounds, final Vector3ic spawn,
+                 final Vector3ic[] prisms) {
         this.id = id;
         this.name = name;
         this.bounds = bounds;

@@ -1,6 +1,6 @@
-id: rainbow
+id: pulse_north
 shaders:
-  - path: shader/rainbow/vertex.glsl
+  - path: shader/pulse/vertex.glsl
     type: vertex
   - path: shader/base/fragment.glsl
     type: fragment

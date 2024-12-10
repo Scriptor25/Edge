@@ -2,12 +2,11 @@ package io.scriptor.engine.gl;
 
 import io.scriptor.engine.IDestructible;
 import io.scriptor.engine.IYamlNode;
+import io.scriptor.engine.Ref;
 import io.scriptor.engine.data.ProgramInfo;
 import io.scriptor.engine.data.ShaderInfo;
 
 import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.IntConsumer;
 
 import static io.scriptor.engine.data.Resources.open;
@@ -15,35 +14,36 @@ import static org.lwjgl.opengl.GL20.*;
 
 public class GLProgram implements IDestructible {
 
-    private static final Map<String, GLProgram> instances = new HashMap<>();
-
-    public static GLProgram get(final String id) {
-        if (!instances.containsKey(id))
-            throw new IllegalStateException(id);
-        return instances.get(id);
+    public static Ref<GLProgram> get(final String id) {
+        return Ref.get(GLProgram.class, id);
     }
 
-    public static GLProgram create(final InputStream stream) {
+    public static Ref<GLProgram> create(final InputStream stream) {
         final var info = ProgramInfo.parse(IYamlNode.load(stream));
-        if (instances.containsKey(info.id()))
-            throw new IllegalStateException(info.id());
-
-        final var instance = new GLProgram(info.shaders());
-        instances.put(info.id(), instance);
-        return instance;
+        return get(info.id()).set(new GLProgram(info.shaders()));
     }
 
     private static String readSource(final String filename) {
         return open(filename, stream -> {
             final var bytes = stream.readAllBytes();
             return new String(bytes);
-        }).orElse("");
+        }).or("");
     }
 
-    private static void addShader(final int program, final int shaderType, final CharSequence source) {
+    private static void addShader(final int program, final int shaderType, final String source) {
         final var shader = glCreateShader(shaderType);
         glShaderSource(shader, source);
         glCompileShader(shader);
+
+        final var pStatus = new int[1];
+        glGetShaderiv(shader, GL_COMPILE_STATUS, pStatus);
+        if (pStatus[0] != GL_TRUE) {
+            final var message = glGetShaderInfoLog(shader);
+            System.err.println(message);
+            glDeleteShader(shader);
+            return;
+        }
+
         glAttachShader(program, shader);
         glDeleteShader(shader);
     }
@@ -54,7 +54,7 @@ public class GLProgram implements IDestructible {
         handle = glCreateProgram();
 
         for (final var shader : shaders)
-            addShader(handle, shader.getType(), readSource(shader.getPath()));
+            addShader(handle, shader.type(), readSource(shader.path()));
 
         glLinkProgram(handle);
         glValidateProgram(handle);

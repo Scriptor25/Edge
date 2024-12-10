@@ -31,7 +31,7 @@ public class Prism extends Cycle {
     public void onUpdate() {
         super.onUpdate();
 
-        final var dt = getEngine().getDeltaTime();
+        final var dt = getEngine().getDeltaTime() * 2.0f;
         final var transform = getComponent(Transform.class);
 
         final var dy = Math.sin(getEngine().getTime()) * 0.2f;
