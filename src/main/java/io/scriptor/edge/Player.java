@@ -19,10 +19,10 @@ public class Player extends Cycle {
         super.onStart();
 
         addComponent(Transform.class)
-                .setTranslation(new Vector3f(0, 0, 0))
+                .setTranslation(new Vector3f(10, 10, 0))
                 .rotateY(-45)
-                .rotateX(30)
-        ;
+                .rotateX(30);
+
         addComponent(Camera.class)
                 .setOrtho(true)
                 .setNear(-100.0f)
