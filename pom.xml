@@ -16,10 +16,10 @@
         <maven.compiler.source>17</maven.compiler.source>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <lwjgl.version>3.3.4</lwjgl.version>
-        <joml.version>1.10.7</joml.version>
+        <lwjgl.version>3.3.6</lwjgl.version>
+        <joml.version>1.10.8</joml.version>
         <joml-primitives.version>1.10.0</joml-primitives.version>
-        <lwjgl3-awt.version>0.1.8</lwjgl3-awt.version>
+        <lwjgl3-awt.version>0.2.3</lwjgl3-awt.version>
         <steamworks4j.version>1.9.0</steamworks4j.version>
         <steamworks4j-server.version>1.9.0</steamworks4j-server.version>
     </properties>
