@@ -1,6 +1,7 @@
 package io.scriptor.engine.gl;
 
 import io.scriptor.engine.IDestructible;
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.ByteBuffer;
 
@@ -23,7 +24,7 @@ public class GLBuffer implements IDestructible {
         return this;
     }
 
-    public GLBuffer data(final ByteBuffer data) {
+    public GLBuffer data(final @NotNull ByteBuffer data) {
         glBufferData(target, data, usage);
         return this;
     }

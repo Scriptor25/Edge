@@ -2,20 +2,24 @@ package io.scriptor.edge;
 
 import io.scriptor.engine.IYamlNode;
 import io.scriptor.engine.data.Mesh;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.joml.*;
 
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 public record Level(
-        String id,
-        String name,
-        Vector3ic spawn,
-        Vector3ic[] prisms,
-        VoxelType[][][] voxels) {
+        @NotNull String id,
+        @NotNull String name,
+        @NotNull Vector3ic spawn,
+        @NotNull Vector3ic @NotNull [] prisms,
+        @NotNull VoxelType @NotNull [] @NotNull [] @NotNull [] voxels
+) {
 
-    private static Vector3ic asVector(final IYamlNode node) {
+    private static @NotNull Vector3ic asVector(final @NotNull IYamlNode node) {
         final var xyz = node
                 .stream()
                 .map(e -> e.as(Integer.class).get())
@@ -23,19 +27,21 @@ public record Level(
         return new Vector3i(xyz[0], xyz[1], xyz[2]);
     }
 
-    public static Level load(final InputStream stream) {
+    public static @NotNull Level load(final @NotNull InputStream stream) {
         final var node = IYamlNode.load(stream);
 
-        final var id = node.get("id").as(String.class).get();
+        final var id   = node.get("id").as(String.class).get();
         final var name = node.get("name").as(String.class).get();
 
         final var spawn = asVector(node.get("spawn"));
-        final var prisms = node.get("prisms")
+        final var prisms = node
+                .get("prisms")
                 .stream()
                 .map(Level::asVector)
                 .toArray(Vector3ic[]::new);
 
-        final var voxels = node.get("voxels")
+        final var voxels = node
+                .get("voxels")
                 .stream()
                 .map(y -> y
                         .stream()
@@ -72,15 +78,15 @@ public record Level(
         END_CENTER
     }
 
-    public String getID() {
+    public @NotNull String getID() {
         return id;
     }
 
-    public String getName() {
+    public @NotNull String getName() {
         return name;
     }
 
-    public Vector3ic getSpawn() {
+    public @NotNull Vector3ic getSpawn() {
         return spawn;
     }
 
@@ -88,25 +94,25 @@ public record Level(
         return prisms.length;
     }
 
-    public Vector3ic getPrism(final int index) {
+    public @NotNull Vector3ic getPrism(final int index) {
         return prisms[index];
     }
 
-    public Stream<Vector3ic> getPrisms() {
+    public @NotNull Stream<Vector3ic> getPrisms() {
         return Arrays.stream(prisms);
     }
 
-    public Vector3ic getBounds() {
+    public @NotNull Vector3ic getBounds() {
         return new Vector3i(voxels[0][0].length, voxels[0].length, voxels.length);
     }
 
-    public VoxelType get(final int x, final int y, final int z) {
+    public @Nullable VoxelType get(final int x, final int y, final int z) {
         if (x < 0 || x >= voxels[0][0].length || y < 0 || y >= voxels[0].length || z < 0 || z >= voxels.length)
             return null;
         return voxels[z][y][x];
     }
 
-    public void set(final int x, final int y, final int z, final VoxelType voxel) {
+    public void set(final int x, final int y, final int z, final @NotNull VoxelType voxel) {
         if (x < 0 || x >= voxels[0][0].length || y < 0 || y >= voxels[0].length || z < 0 || z >= voxels.length)
             return;
         voxels[z][y][x] = voxel;
@@ -116,13 +122,13 @@ public record Level(
         return get(x, y, z) == null;
     }
 
-    public void generate(final Mesh defaultMesh, final Mesh... meshes) {
+    public void generate(final @NotNull Mesh defaultMesh, final @Nullable Mesh @NotNull ... meshes) {
         defaultMesh.clear();
         for (final var mesh : meshes)
             if (mesh != null)
                 mesh.clear();
 
-        final var baseColor = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+        final var baseColor    = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
         final var checkerColor = new Vector4f(0.95f, 0.95f, 0.95f, 1.0f);
 
         for (int z = 0; z < voxels.length; ++z)
@@ -140,20 +146,19 @@ public record Level(
             final int x,
             final int y,
             final int z,
-            final Mesh defaultMesh,
-            final Mesh[] meshes,
-            final Vector4fc baseColor,
-            final Vector4fc checkerColor) {
+            final @NotNull Mesh defaultMesh,
+            final @Nullable Mesh @NotNull [] meshes,
+            final @NotNull Vector4fc baseColor,
+            final @NotNull Vector4fc checkerColor
+    ) {
         final var type = get(x, y, z);
         if (type == null)
             return;
 
-        final var mesh = meshes[type.ordinal()] == null
-                ? defaultMesh
-                : meshes[type.ordinal()];
+        final var mesh = Objects.requireNonNullElse(meshes[type.ordinal()], defaultMesh);
 
         final Vector4fc color;
-        final Mesh baseMesh;
+        final Mesh      baseMesh;
         switch (type) {
             case BASE:
                 final var isEven = (x + z) % 2 == 0;
@@ -172,7 +177,7 @@ public record Level(
                  END_CENTER:
             default:
                 color = baseColor;
-                baseMesh = meshes[0];
+                baseMesh = Objects.requireNonNull(meshes[0]);
                 break;
         }
 
@@ -180,30 +185,32 @@ public record Level(
     }
 
     private void generateBlock(
-            final Vector3ic pos,
-            final Mesh baseMesh,
-            final Mesh mesh,
-            final Vector4fc baseColor,
-            final Vector4fc color) {
+            final @NotNull Vector3ic pos,
+            final @NotNull Mesh baseMesh,
+            final @NotNull Mesh mesh,
+            final @NotNull Vector4fc baseColor,
+            final @NotNull Vector4fc color
+    ) {
         if (pos.y() == 0)
             generateHalfBlock(pos, baseMesh, mesh, baseColor, color);
         else
             generateFullBlock(pos, baseMesh, mesh, baseColor, color);
     }
 
-    private static final Vector3fc DX = new Vector3f(0.5f, 0.0f, 0.0f);
-    private static final Vector3fc DY = new Vector3f(0.0f, 0.5f, 0.0f);
-    private static final Vector3fc DZ = new Vector3f(0.0f, 0.0f, 0.5f);
-    public static final Vector3fc RIGHT = new Vector3f(1.0f, 0.0f, 0.0f);
-    public static final Vector3fc UP = new Vector3f(0.0f, 1.0f, 0.0f);
-    public static final Vector3fc FORWARD = new Vector3f(0.0f, 0.0f, 1.0f);
+    private static final @NotNull Vector3fc DX = new Vector3f(0.5f, 0.0f, 0.0f);
+    private static final @NotNull Vector3fc DY = new Vector3f(0.0f, 0.5f, 0.0f);
+    private static final @NotNull Vector3fc DZ = new Vector3f(0.0f, 0.0f, 0.5f);
+    public static final @NotNull Vector3fc RIGHT = new Vector3f(1.0f, 0.0f, 0.0f);
+    public static final @NotNull Vector3fc UP = new Vector3f(0.0f, 1.0f, 0.0f);
+    public static final @NotNull Vector3fc FORWARD = new Vector3f(0.0f, 0.0f, 1.0f);
 
     private void generateHalfBlock(
-            final Vector3ic pos,
-            final Mesh baseMesh,
-            final Mesh mesh,
-            final Vector4fc baseColor,
-            final Vector4fc color) {
+            final @NotNull Vector3ic pos,
+            final @NotNull Mesh baseMesh,
+            final @NotNull Mesh mesh,
+            final @NotNull Vector4fc baseColor,
+            final @NotNull Vector4fc color
+    ) {
         if (isAir(pos.x() - 1, pos.y(), pos.z()))
             baseMesh.addQuad(new Vector3f(pos).sub(DX).sub(DZ), DY, FORWARD, baseColor);
         if (isAir(pos.x() + 1, pos.y(), pos.z()))
@@ -218,11 +225,12 @@ public record Level(
     }
 
     private void generateFullBlock(
-            final Vector3ic pos,
-            final Mesh baseMesh,
-            final Mesh mesh,
-            final Vector4fc baseColor,
-            final Vector4fc color) {
+            final @NotNull Vector3ic pos,
+            final @NotNull Mesh baseMesh,
+            final @NotNull Mesh mesh,
+            final @NotNull Vector4fc baseColor,
+            final @NotNull Vector4fc color
+    ) {
         if (isAir(pos.x() - 1, pos.y(), pos.z()))
             baseMesh.addQuad(new Vector3f(pos).sub(DX).sub(DY).sub(DZ), UP, FORWARD, baseColor);
         if (isAir(pos.x() + 1, pos.y(), pos.z()))

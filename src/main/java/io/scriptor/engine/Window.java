@@ -1,5 +1,6 @@
 package io.scriptor.engine;
 
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.system.NativeResource;
 
@@ -13,7 +14,7 @@ public class Window implements IDestructible {
 
     private final long handle;
 
-    public Window(final Engine engine, final String title, final int width, final int height) {
+    public Window(final @NotNull Engine engine, final @NotNull String title, final int width, final int height) {
         GLFWErrorCallback.createPrint(System.err).set();
         if (!glfwInit())
             throw new IllegalStateException();

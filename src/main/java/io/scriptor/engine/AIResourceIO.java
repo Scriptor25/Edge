@@ -1,5 +1,6 @@
 package io.scriptor.engine;
 
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.assimp.AIFile;
 import org.lwjgl.assimp.AIFileIO;
 
@@ -13,8 +14,8 @@ import static org.lwjgl.system.MemoryUtil.*;
 
 public class AIResourceIO implements IDestructible {
 
-    private final AIFileIO aiFileIO;
-    private final Map<AIFile, ByteBuffer> aiFiles = new HashMap<>();
+    private final @NotNull AIFileIO aiFileIO;
+    private final @NotNull Map<AIFile, @NotNull ByteBuffer> aiFiles = new HashMap<>();
 
     public AIResourceIO() {
         aiFileIO = AIFileIO.create();
@@ -58,13 +59,14 @@ public class AIResourceIO implements IDestructible {
             }).or(NULL);
         });
         aiFileIO.CloseProc((pFileIO, pFile) -> {
-            if (pFile == NULL) return;
+            if (pFile == NULL)
+                return;
             final var aiFile = AIFile.create(pFile);
             memFree(aiFiles.get(aiFile));
         });
     }
 
-    public AIFileIO getFileIO() {
+    public @NotNull AIFileIO getFileIO() {
         return aiFileIO;
     }
 

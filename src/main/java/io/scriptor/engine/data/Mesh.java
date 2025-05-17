@@ -3,6 +3,7 @@ package io.scriptor.engine.data;
 import io.scriptor.engine.IDestructible;
 import io.scriptor.engine.Ref;
 import io.scriptor.engine.gl.GLBuffer;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
@@ -17,19 +18,19 @@ import static org.lwjgl.opengl.GL15.*;
 
 public class Mesh implements IDestructible {
 
-    public static Ref<Mesh> get(final String id) {
+    public static @NotNull Ref<Mesh> get(final @NotNull String id) {
         return Ref.get(Mesh.class, id);
     }
 
-    public static Ref<Mesh> create(final String id) {
+    public static @NotNull Ref<Mesh> create(final @NotNull String id) {
         return Ref.create(Mesh.class, id, new Mesh());
     }
 
-    private final List<Vertex> vertices = new ArrayList<>();
-    private final List<Integer> indices = new ArrayList<>();
+    private final @NotNull List<Vertex> vertices = new ArrayList<>();
+    private final @NotNull List<Integer> indices = new ArrayList<>();
 
-    private final GLBuffer vbo = new GLBuffer(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW);
-    private final GLBuffer ibo = new GLBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_DYNAMIC_DRAW);
+    private final @NotNull GLBuffer vbo = new GLBuffer(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW);
+    private final @NotNull GLBuffer ibo = new GLBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_DYNAMIC_DRAW);
 
     private Mesh() {
     }
@@ -39,11 +40,11 @@ public class Mesh implements IDestructible {
         indices.clear();
     }
 
-    public void add(final Vertex vertex) {
+    public void add(final @NotNull Vertex vertex) {
         vertices.add(vertex);
     }
 
-    public void add(final Vertex... vertices) {
+    public void add(final @NotNull Vertex... vertices) {
         for (final var vertex : vertices)
             add(vertex);
     }
@@ -57,11 +58,16 @@ public class Mesh implements IDestructible {
             add(index);
     }
 
-    public void addQuad(final Vector3fc origin, final Vector3fc edge0, final Vector3fc edge1, final Vector4fc color) {
+    public void addQuad(
+            final @NotNull Vector3fc origin,
+            final @NotNull Vector3fc edge0,
+            final @NotNull Vector3fc edge1,
+            final @NotNull Vector4fc color
+    ) {
         final var first = vertices.size();
 
-        final var ne0 = edge0.normalize(new Vector3f());
-        final var ne1 = edge1.normalize(new Vector3f());
+        final var ne0    = edge0.normalize(new Vector3f());
+        final var ne1    = edge1.normalize(new Vector3f());
         final var normal = ne0.cross(ne1, new Vector3f());
 
         add(new Vertex(origin, new Vector2f(0, 0), normal, color));
@@ -78,20 +84,18 @@ public class Mesh implements IDestructible {
                 .order(ByteOrder.nativeOrder());
         vertices.forEach(vertex -> vertex.get(vb));
         vb.flip();
-        vbo
-                .bind()
-                .data(vb)
-                .unbind();
+        vbo.bind()
+           .data(vb)
+           .unbind();
 
         final var ib = ByteBuffer
                 .allocateDirect(Integer.BYTES * indices.size())
                 .order(ByteOrder.nativeOrder());
         indices.forEach(ib::putInt);
         ib.flip();
-        ibo
-                .bind()
-                .data(ib)
-                .unbind();
+        ibo.bind()
+           .data(ib)
+           .unbind();
     }
 
     public void bind() {

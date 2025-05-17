@@ -1,18 +1,20 @@
 package io.scriptor.engine.data;
 
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector4fc;
 
 public record MaterialInfo(
-        String name,
+        @NotNull String name,
         int shadingMode,
         int illumination,
-        Vector4fc ambient,
-        Vector4fc diffuse,
-        Vector4fc specular,
-        Vector4fc emissive,
+        @NotNull Vector4fc ambient,
+        @NotNull Vector4fc diffuse,
+        @NotNull Vector4fc specular,
+        @NotNull Vector4fc emissive,
         float shininess,
         float opacity,
-        Vector4fc transparent,
+        @NotNull Vector4fc transparent,
         float anisotropyFactor,
-        float refractionIndex) {
+        float refractionIndex
+) {
 }

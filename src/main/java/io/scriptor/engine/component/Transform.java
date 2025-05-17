@@ -1,96 +1,103 @@
 package io.scriptor.engine.component;
 
 import io.scriptor.engine.Cycle;
-import org.joml.Math;
+import org.jetbrains.annotations.NotNull;
 import org.joml.*;
+import org.joml.Math;
 
 public class Transform extends Component {
 
-    private final Vector3f translation = new Vector3f();
-    private final Quaternionf rotation = new Quaternionf();
-    private final Vector3f scale = new Vector3f(1);
+    private final @NotNull Vector3f translation = new Vector3f();
+    private final @NotNull Quaternionf rotation = new Quaternionf();
+    private final @NotNull Vector3f scale = new Vector3f(1);
 
     private boolean dirty = false;
-    private final Matrix4f matrix = new Matrix4f();
-    private final Matrix4f inverse = new Matrix4f();
+    private final @NotNull Matrix4f matrix = new Matrix4f();
+    private final @NotNull Matrix4f inverse = new Matrix4f();
 
-    public Transform(final Cycle cycle) {
+    public Transform(final @NotNull Cycle cycle) {
         super(cycle);
     }
 
-    public Vector3fc getTranslation() {
+    public @NotNull Vector3fc getTranslation() {
         return this.translation;
     }
 
-    public Quaternionfc getRotation() {
+    public @NotNull Quaternionfc getRotation() {
         return this.rotation;
     }
 
-    public Vector3f getScale() {
+    public @NotNull Vector3fc getScale() {
         return this.scale;
     }
 
-    public Transform setTranslation(final Vector3f translation) {
+    public @NotNull Transform setTranslation(final @NotNull Vector3fc translation) {
         this.dirty = true;
         this.translation.set(translation);
         return this;
     }
 
-    public Transform setRotation(final Quaternionf rotation) {
+    public @NotNull Transform setTranslation(final float x, final float y, final float z) {
+        this.dirty = true;
+        this.translation.set(x, y, z);
+        return this;
+    }
+
+    public @NotNull Transform setRotation(final @NotNull Quaternionfc rotation) {
         this.dirty = true;
         this.rotation.set(rotation);
         return this;
     }
 
-    public Transform setScale(final Vector3f scale) {
+    public @NotNull Transform setScale(final @NotNull Vector3fc scale) {
         this.dirty = true;
         this.scale.set(scale);
         return this;
     }
 
-    public Transform setScale(final float scale) {
+    public @NotNull Transform setScale(final float scale) {
         this.dirty = true;
         this.scale.set(scale);
         return this;
     }
 
-    public Transform translate(final Vector3f delta) {
+    public @NotNull Transform translate(final @NotNull Vector3fc delta) {
         this.dirty = true;
         this.translation.add(delta);
         return this;
     }
 
-    public Transform translate(final float dx, final float dy, final float dz) {
+    public @NotNull Transform translate(final float dx, final float dy, final float dz) {
         this.dirty = true;
         this.translation.add(dx, dy, dz);
         return this;
     }
 
-    public Transform rotate(final float angle, final Vector3fc axis) {
+    public @NotNull Transform rotate(final float angle, final @NotNull Vector3fc axis) {
         this.dirty = true;
         this.rotation.rotateAxis(angle, axis);
         return this;
     }
 
-    public Transform rotateX(final float angle) {
+    public @NotNull Transform rotateX(final float angle) {
         this.dirty = true;
         this.rotation.rotateX(Math.toRadians(angle));
         return this;
     }
 
-    public Transform rotateY(final float angle) {
+    public @NotNull Transform rotateY(final float angle) {
         this.dirty = true;
         this.rotation.rotateY(Math.toRadians(angle));
         return this;
     }
 
-    public Transform scale(final float delta) {
+    public @NotNull Transform scale(final float delta) {
         this.dirty = true;
         this.scale.mul(delta);
         return this;
     }
 
-    public Transform clampTranslation(final Vector3fc min, final Vector3fc max) {
+    public @NotNull Transform clampTranslation(final @NotNull Vector3fc min, final @NotNull Vector3fc max) {
         this.dirty = true;
         translation.x = Math.clamp(min.x(), max.x(), translation.x);
         translation.y = Math.clamp(min.y(), max.y(), translation.y);
@@ -98,7 +105,7 @@ public class Transform extends Component {
         return this;
     }
 
-    public Matrix4fc getMatrix() {
+    public @NotNull Matrix4fc getMatrix() {
         if (dirty) {
             dirty = false;
             matrix.translationRotateScale(translation, rotation, scale);
@@ -107,7 +114,7 @@ public class Transform extends Component {
         return matrix;
     }
 
-    public Matrix4f getInverse() {
+    public @NotNull Matrix4fc getInverse() {
         if (dirty) {
             dirty = false;
             matrix.translationRotateScale(translation, rotation, scale);

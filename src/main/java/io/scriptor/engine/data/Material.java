@@ -3,24 +3,25 @@ package io.scriptor.engine.data;
 import io.scriptor.engine.IDestructible;
 import io.scriptor.engine.Ref;
 import io.scriptor.engine.gl.GLProgram;
+import org.jetbrains.annotations.NotNull;
 
 public class Material implements IDestructible {
 
-    public static Ref<Material> get(final String id) {
+    public static @NotNull Ref<Material> get(final @NotNull String id) {
         return Ref.get(Material.class, id);
     }
 
-    public static Ref<Material> create(final String id, final Ref<GLProgram> program) {
+    public static @NotNull Ref<Material> create(final @NotNull String id, final @NotNull Ref<GLProgram> program) {
         return Ref.create(Material.class, id, new Material(program));
     }
 
-    public static Ref<Material> create(final String id, final String programId) {
+    public static @NotNull Ref<Material> create(final @NotNull String id, final @NotNull String programId) {
         return create(id, GLProgram.get(programId));
     }
 
-    private final Ref<GLProgram> program;
+    private final @NotNull Ref<GLProgram> program;
 
-    private Material(final Ref<GLProgram> program) {
+    private Material(final @NotNull Ref<GLProgram> program) {
         this.program = program;
         this.program.use();
     }
@@ -33,7 +34,7 @@ public class Material implements IDestructible {
         program.ok(GLProgram::unbind);
     }
 
-    public Ref<GLProgram> getProgram() {
+    public @NotNull Ref<GLProgram> getProgram() {
         return program;
     }
 

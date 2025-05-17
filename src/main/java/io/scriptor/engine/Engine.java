@@ -4,15 +4,16 @@ import io.scriptor.engine.component.Camera;
 import io.scriptor.engine.component.Model;
 import io.scriptor.engine.component.Transform;
 import io.scriptor.engine.data.Vertex;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryUtil;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
@@ -46,18 +47,18 @@ public class Engine implements IDestructible {
         }
     }
 
-    private final Window window;
+    private final @NotNull Window window;
 
-    private final List<Runnable> tasks = new ArrayList<>();
-    private final Map<String, Cycle> cycles = new HashMap<>();
-    private final Map<Integer, KeyRecord> keys = new HashMap<>();
+    private final @NotNull Queue<Runnable> tasks = new ArrayDeque<>();
+    private final @NotNull Map<String, Cycle> cycles = new HashMap<>();
+    private final @NotNull Map<Integer, KeyRecord> keys = new HashMap<>();
 
     private int width;
     private int height;
     private float previous;
     private float deltaTime;
 
-    public Engine(final String title, int width, int height) {
+    public Engine(final @NotNull String title, final int width, final int height) {
         window = new Window(this, title, width, height);
         this.width = width;
         this.height = height;
@@ -74,13 +75,17 @@ public class Engine implements IDestructible {
             keys.put(key, new KeyRecord());
     }
 
-    public void schedule(final Runnable task) {
+    public void schedule(final @NotNull Runnable task) {
         tasks.add(task);
     }
 
-    public <T extends Cycle> T addCycle(final String id, final Class<T> type, final Object... args) {
+    public <T extends Cycle> @NotNull T addCycle(
+            final @NotNull String id,
+            final @NotNull Class<T> type,
+            final @NotNull Object... args
+    ) {
         final var paramTypes = new Class<?>[args.length + 1];
-        final var params = new Object[args.length + 1];
+        final var params     = new Object[args.length + 1];
         for (int i = 0; i < params.length; ++i) {
             paramTypes[i] = i == 0 ? Engine.class : args[i - 1].getClass();
             params[i] = i == 0 ? this : args[i - 1];
@@ -91,12 +96,12 @@ public class Engine implements IDestructible {
             cycle = type
                     .getConstructor(paramTypes)
                     .newInstance(params);
-        } catch (final InstantiationException
-                       | IllegalAccessException
-                       | IllegalArgumentException
-                       | InvocationTargetException
-                       | NoSuchMethodException
-                       | SecurityException e) {
+        } catch (final @NotNull InstantiationException
+                                | IllegalAccessException
+                                | IllegalArgumentException
+                                | InvocationTargetException
+                                | NoSuchMethodException
+                                | SecurityException e) {
             throw new IllegalStateException(e);
         }
 
@@ -104,7 +109,9 @@ public class Engine implements IDestructible {
         return cycle;
     }
 
-    public <T extends Cycle> T getCycle(final String id, final Class<T> type) {
+    public <T extends Cycle> @NotNull T getCycle(final @NotNull String id, final @NotNull Class<T> type) {
+        if (!cycles.containsKey(id))
+            throw new IllegalStateException();
         return type.cast(cycles.get(id));
     }
 
@@ -165,7 +172,7 @@ public class Engine implements IDestructible {
     }
 
     public void onKey(final long handle, final int key, final int scancode, final int action, final int mods) {
-        cycles.forEach((id, cycle) -> cycle.onKey(key, scancode, action, mods));
+        cycles.forEach((id, cycle) -> cycle.key(key, scancode, action, mods));
     }
 
     public void onSize(final long handle, final int width, final int height) {
@@ -174,13 +181,26 @@ public class Engine implements IDestructible {
         this.height = height;
     }
 
-    public void onMessage(int source, int type, int id, int severity, int length, long message, long userParam) {
+    public void onMessage(
+            final int source,
+            final int type,
+            final int id,
+            final int severity,
+            final int length,
+            final long message,
+            final long userParam
+    ) {
         final var msg = MemoryUtil.memASCII(message);
         System.err.printf("[OpenGL] %s%n", msg);
     }
 
+    private void runTasks() {
+        while (!tasks.isEmpty())
+            tasks.poll().run();
+    }
+
     private void onStart() {
-        cycles.values().forEach(Cycle::onStart);
+        runTasks();
     }
 
     private void onUpdate() {
@@ -188,11 +208,7 @@ public class Engine implements IDestructible {
         deltaTime = time - previous;
         previous = time;
 
-        while (!tasks.isEmpty()) {
-            final var task = tasks.get(0);
-            tasks.remove(0);
-            task.run();
-        }
+        runTasks();
 
         for (final var entry : keys.entrySet()) {
             entry.getValue().update(window.getKey(entry.getKey()));
@@ -214,20 +230,20 @@ public class Engine implements IDestructible {
                 .filter(cycle -> cycle.hasComponent(Camera.class))
                 .findFirst();
         if (cam.isEmpty()) {
-            cycles.values().forEach(Cycle::onUpdate);
+            cycles.values().forEach(Cycle::update);
             return;
         }
 
         final var cTransform = cam.get().getComponent(Transform.class);
-        final var cCamera = cam.get().getComponent(Camera.class);
+        final var cCamera    = cam.get().getComponent(Camera.class);
 
         final var view = cTransform.getInverse();
         final var proj = cCamera.getMatrix();
 
         cycles.forEach((id, cycle) -> cycle.stream(Model.class).forEach(model -> {
             final var transform = cycle.hasComponent(Transform.class)
-                    ? cycle.getComponent(Transform.class).getMatrix()
-                    : new Matrix4f();
+                                  ? cycle.getComponent(Transform.class).getMatrix()
+                                  : new Matrix4f();
 
             model.getMaterial().ok(material -> {
                 material.bind();
@@ -238,51 +254,47 @@ public class Engine implements IDestructible {
                         .uniform("TIME", loc -> glUniform1f(loc, (float) glfwGetTime()))
                         .uniform("SUN_DIRECTION", loc -> glUniform3f(loc, -0.4f, -0.7f, 0.5f)));
 
-                model
-                        .stream()
-                        .filter(Ref::ok)
-                        .map(Ref::get)
-                        .forEach(mesh -> {
-                            mesh.bind();
+                model.stream().filter(Ref::ok).map(Ref::get).forEach(mesh -> {
+                    mesh.bind();
 
-                            glEnableVertexAttribArray(0);
-                            glEnableVertexAttribArray(1);
-                            glEnableVertexAttribArray(2);
-                            glEnableVertexAttribArray(3);
+                    glEnableVertexAttribArray(0);
+                    glEnableVertexAttribArray(1);
+                    glEnableVertexAttribArray(2);
+                    glEnableVertexAttribArray(3);
 
-                            var offset = NULL;
-                            glVertexAttribPointer(0, 3, GL_FLOAT, false, Vertex.BYTES, offset);
-                            offset += Float.BYTES * 3L;
-                            glVertexAttribPointer(1, 2, GL_FLOAT, false, Vertex.BYTES, offset);
-                            offset += Float.BYTES * 2L;
-                            glVertexAttribPointer(2, 3, GL_FLOAT, false, Vertex.BYTES, offset);
-                            offset += Float.BYTES * 3L;
-                            glVertexAttribPointer(3, 4, GL_FLOAT, false, Vertex.BYTES, offset);
-                            offset += Float.BYTES * 4L;
+                    var offset = NULL;
+                    glVertexAttribPointer(0, 3, GL_FLOAT, false, Vertex.BYTES, offset);
+                    offset += Float.BYTES * 3L;
+                    glVertexAttribPointer(1, 2, GL_FLOAT, false, Vertex.BYTES, offset);
+                    offset += Float.BYTES * 2L;
+                    glVertexAttribPointer(2, 3, GL_FLOAT, false, Vertex.BYTES, offset);
+                    offset += Float.BYTES * 3L;
+                    glVertexAttribPointer(3, 4, GL_FLOAT, false, Vertex.BYTES, offset);
+                    offset += Float.BYTES * 4L;
 
-                            glDrawElements(GL_TRIANGLES, mesh.count(), GL_UNSIGNED_INT, NULL);
+                    glDrawElements(GL_TRIANGLES, mesh.count(), GL_UNSIGNED_INT, NULL);
 
-                            glDisableVertexAttribArray(0);
-                            glDisableVertexAttribArray(1);
-                            glDisableVertexAttribArray(2);
-                            glDisableVertexAttribArray(3);
+                    glDisableVertexAttribArray(0);
+                    glDisableVertexAttribArray(1);
+                    glDisableVertexAttribArray(2);
+                    glDisableVertexAttribArray(3);
 
-                            mesh.unbind();
-                        });
+                    mesh.unbind();
+                });
 
                 material.unbind();
             });
         }));
 
-        cycles.values().forEach(Cycle::onUpdate);
+        cycles.values().forEach(Cycle::update);
     }
 
     private void onStop() {
-        cycles.values().forEach(Cycle::onStop);
+        cycles.values().forEach(Cycle::stop);
     }
 
     private void onDestroy() {
-        cycles.values().forEach(Cycle::onDestroy);
+        cycles.values().forEach(Cycle::destroy);
 
         GL.destroy();
         window.destroy();

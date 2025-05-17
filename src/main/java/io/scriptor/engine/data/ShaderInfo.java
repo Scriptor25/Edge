@@ -1,6 +1,7 @@
 package io.scriptor.engine.data;
 
 import io.scriptor.engine.IYamlNode;
+import org.jetbrains.annotations.NotNull;
 
 import static org.lwjgl.opengl.GL20.GL_FRAGMENT_SHADER;
 import static org.lwjgl.opengl.GL20.GL_VERTEX_SHADER;
@@ -9,9 +10,9 @@ import static org.lwjgl.opengl.GL40.GL_TESS_CONTROL_SHADER;
 import static org.lwjgl.opengl.GL40.GL_TESS_EVALUATION_SHADER;
 import static org.lwjgl.opengl.GL43.GL_COMPUTE_SHADER;
 
-public record ShaderInfo(String path, int type) {
+public record ShaderInfo(@NotNull String path, int type) {
 
-    public static ShaderInfo parse(final IYamlNode yaml) {
+    public static @NotNull ShaderInfo parse(final @NotNull IYamlNode yaml) {
         final var path = yaml.get("path").as(String.class).get();
         final var type = yaml.get("type").as(String.class).get();
         return new ShaderInfo(path, switch (type) {

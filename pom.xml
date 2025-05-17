@@ -619,6 +619,12 @@
             <artifactId>steamworks4j-server</artifactId>
             <version>${steamworks4j-server.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
+            <version>26.0.1</version>
+        </dependency>
     </dependencies>
 
 </project>

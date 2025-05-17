@@ -3,12 +3,14 @@ package io.scriptor.engine;
 import io.scriptor.engine.data.MaterialInfo;
 import io.scriptor.engine.data.MeshInfo;
 import io.scriptor.engine.data.Vertex;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.lwjgl.assimp.*;
 
 import java.io.InputStream;
+import java.util.Optional;
 
 import static org.lwjgl.assimp.Assimp.*;
 
@@ -17,7 +19,7 @@ public class ModelLoader {
     private ModelLoader() {
     }
 
-    public static void loadModel(final InputStream stream) {
+    public static void loadModel(final @NotNull InputStream stream) {
         final var node = IYamlNode.load(stream);
 
         final var path = node
@@ -48,31 +50,31 @@ public class ModelLoader {
                 .or(0);
 
         final var resources = new AIResourceIO();
-        final var pScene = aiImportFileEx(path, flags, resources.getFileIO());
+        final var pScene    = aiImportFileEx(path, flags, resources.getFileIO());
         assert pScene != null;
 
         processMaterials(pScene);
         processMeshes(pScene);
     }
 
-    private static void processMaterials(final AIScene pScene) {
+    private static void processMaterials(final @NotNull AIScene pScene) {
         final var ppMaterials = pScene.mMaterials();
         assert ppMaterials != null;
         for (int i = 0; i < pScene.mNumMaterials(); ++i) {
             final var pMaterial = AIMaterial.create(ppMaterials.get(i));
 
-            final var pName = AIString.create();
-            final var pShadingMode = new int[1];
-            final var pIllumination = new int[1];
-            final var pAmbient = AIColor4D.create();
-            final var pDiffuse = AIColor4D.create();
-            final var pSpecular = AIColor4D.create();
-            final var pEmissive = AIColor4D.create();
-            final var pShininess = new float[1];
-            final var pOpacity = new float[1];
-            final var pTransparent = AIColor4D.create();
+            final var pName             = AIString.create();
+            final var pShadingMode      = new int[1];
+            final var pIllumination     = new int[1];
+            final var pAmbient          = AIColor4D.create();
+            final var pDiffuse          = AIColor4D.create();
+            final var pSpecular         = AIColor4D.create();
+            final var pEmissive         = AIColor4D.create();
+            final var pShininess        = new float[1];
+            final var pOpacity          = new float[1];
+            final var pTransparent      = AIColor4D.create();
             final var pAnisotropyFactor = new float[1];
-            final var pRefractionIndex = new float[1];
+            final var pRefractionIndex  = new float[1];
 
             aiGetMaterialString(pMaterial, "?mat.name", 0, 0, pName);
             aiGetMaterialIntegerArray(pMaterial, "$mat.shadingm", 0, 0, pShadingMode, null);
@@ -104,29 +106,40 @@ public class ModelLoader {
         }
     }
 
-    private static void processMeshes(final AIScene pScene) {
+    private static void processMeshes(final @NotNull AIScene pScene) {
         final var ppMeshes = pScene.mMeshes();
         assert ppMeshes != null;
+
         for (int i = 0; i < pScene.mNumMeshes(); ++i) {
             final var pMesh = AIMesh.create(ppMeshes.get(i));
-
-            final var name = pMesh.mName().dataString();
+            final var name  = pMesh.mName().dataString();
 
             final var vertices = new Vertex[pMesh.mNumVertices()];
             for (int j = 0; j < pMesh.mNumVertices(); ++j) {
-                final var position = pMesh.mVertices().get(j);
-                final var normal = pMesh.mNormals().get(j);
-                final var texture = pMesh.mTextureCoords(0).get(j);
-                final var color = pMesh.mColors(0) != null ? pMesh.mColors(0).get(j) : null;
+                final var fj = j;
 
-                vertices[j] = new Vertex(
-                        new Vector3f(position.x(), position.y(), position.z()),
-                        new Vector2f(texture.x(), texture.y()),
-                        new Vector3f(normal.x(), normal.y(), normal.z()),
-                        color != null
-                                ? new Vector4f(color.r(), color.g(), color.b(), color.a())
-                                : new Vector4f(1.0f)
-                );
+                final var position = Optional
+                        .of(pMesh.mVertices())
+                        .map(buffer -> buffer.get(fj))
+                        .map(v -> new Vector3f(v.x(), v.y(), v.z()))
+                        .orElseGet(Vector3f::new);
+                final var normal = Optional
+                        .ofNullable(pMesh.mNormals())
+                        .map(buffer -> buffer.get(fj))
+                        .map(v -> new Vector3f(v.x(), v.y(), v.z()))
+                        .orElseGet(Vector3f::new);
+                final var texture = Optional
+                        .ofNullable(pMesh.mTextureCoords(0))
+                        .map(buffer -> buffer.get(fj))
+                        .map(v -> new Vector2f(v.x(), v.y()))
+                        .orElseGet(Vector2f::new);
+                final var color = Optional
+                        .ofNullable(pMesh.mColors(0))
+                        .map(buffer -> buffer.get(fj))
+                        .map(v -> new Vector4f(v.r(), v.g(), v.b(), v.a()))
+                        .orElseGet(() -> new Vector4f(1.0f));
+
+                vertices[j] = new Vertex(position, texture, normal, color);
             }
 
             final var indices = new int[pMesh.mNumFaces() * 3];
