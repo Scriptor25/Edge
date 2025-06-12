@@ -5,15 +5,16 @@ import io.scriptor.engine.component.Model;
 import io.scriptor.engine.component.Transform;
 import io.scriptor.engine.data.Vertex;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryUtil;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Queue;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
@@ -49,14 +50,17 @@ public class Engine implements IDestructible {
 
     private final @NotNull Window window;
 
-    private final @NotNull Queue<Runnable> tasks = new ArrayDeque<>();
     private final @NotNull Map<String, Cycle> cycles = new HashMap<>();
     private final @NotNull Map<Integer, KeyRecord> keys = new HashMap<>();
+
+    private final @NotNull Map<String, Cycle> nextCycles = new HashMap<>();
 
     private int width;
     private int height;
     private float previous;
     private float deltaTime;
+
+    private Timer timer;
 
     public Engine(final @NotNull String title, final int width, final int height) {
         window = new Window(this, title, width, height);
@@ -75,20 +79,31 @@ public class Engine implements IDestructible {
             keys.put(key, new KeyRecord());
     }
 
-    public void schedule(final @NotNull Runnable task) {
-        tasks.add(task);
-    }
-
     public <T extends Cycle> @NotNull T addCycle(
             final @NotNull String id,
             final @NotNull Class<T> type,
+            final @Nullable Cycle parent,
             final @NotNull Object... args
     ) {
-        final var paramTypes = new Class<?>[args.length + 1];
-        final var params     = new Object[args.length + 1];
+        final var paramTypes = new Class<?>[args.length + 2];
+        final var params     = new Object[args.length + 2];
         for (int i = 0; i < params.length; ++i) {
-            paramTypes[i] = i == 0 ? Engine.class : args[i - 1].getClass();
-            params[i] = i == 0 ? this : args[i - 1];
+            switch (i) {
+                case 0 -> {
+                    paramTypes[i] = Engine.class;
+                    params[i] = this;
+                }
+
+                case 1 -> {
+                    paramTypes[i] = Cycle.class;
+                    params[i] = parent;
+                }
+
+                default -> {
+                    paramTypes[i] = args[i - 2].getClass();
+                    params[i] = args[i - 2];
+                }
+            }
         }
 
         final T cycle;
@@ -105,7 +120,7 @@ public class Engine implements IDestructible {
             throw new IllegalStateException(e);
         }
 
-        schedule(() -> cycles.put(id, cycle));
+        nextCycles.put(id, cycle);
         return cycle;
     }
 
@@ -152,9 +167,20 @@ public class Engine implements IDestructible {
     public void start() {
         onStart();
 
+        timer.scheduleAtFixedRate(new TimerTask() {
+
+            @Override
+            public void run() {
+                cycles.values().forEach(Cycle::fixed);
+            }
+
+        }, 50, 50);
+
         window.open(true);
         while (window.update())
             onUpdate();
+
+        timer.cancel();
 
         onStop();
     }
@@ -194,13 +220,18 @@ public class Engine implements IDestructible {
         System.err.printf("[OpenGL] %s%n", msg);
     }
 
-    private void runTasks() {
-        while (!tasks.isEmpty())
-            tasks.poll().run();
+    private void startNextCycles() {
+        while (!nextCycles.isEmpty()) {
+            cycles.putAll(nextCycles);
+            nextCycles.clear();
+            cycles.values().forEach(Cycle::start);
+        }
     }
 
     private void onStart() {
-        runTasks();
+        startNextCycles();
+
+        timer = new Timer();
     }
 
     private void onUpdate() {
@@ -208,7 +239,7 @@ public class Engine implements IDestructible {
         deltaTime = time - previous;
         previous = time;
 
-        runTasks();
+        startNextCycles();
 
         for (final var entry : keys.entrySet()) {
             entry.getValue().update(window.getKey(entry.getKey()));
@@ -234,11 +265,11 @@ public class Engine implements IDestructible {
             return;
         }
 
-        final var cTransform = cam.get().getComponent(Transform.class);
-        final var cCamera    = cam.get().getComponent(Camera.class);
+        final var cameraTransform = cam.get().getComponent(Transform.class);
+        final var cameraCamera    = cam.get().getComponent(Camera.class);
 
-        final var view = cTransform.getInverse();
-        final var proj = cCamera.getMatrix();
+        final var view = cameraTransform.getInverse();
+        final var proj = cameraCamera.getMatrix();
 
         cycles.forEach((id, cycle) -> cycle.stream(Model.class).forEach(model -> {
             final var transform = cycle.hasComponent(Transform.class)

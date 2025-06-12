@@ -4,6 +4,7 @@ import io.scriptor.engine.Cycle;
 import io.scriptor.engine.Engine;
 import io.scriptor.engine.ModelLoader;
 import io.scriptor.engine.component.Model;
+import io.scriptor.engine.component.Transform;
 import io.scriptor.engine.data.Material;
 import io.scriptor.engine.data.Mesh;
 import io.scriptor.engine.gl.GLProgram;
@@ -31,15 +32,15 @@ public class World extends Cycle {
     private static final @NotNull String PULSE_WEST = "pulse_west";
     private static final @NotNull String END_FRAME = "end_frame";
 
-    public World(final @NotNull Engine engine) {
-        super(engine);
+    public World(final @NotNull Engine engine, final @Nullable Cycle parent) {
+        super(engine, parent);
     }
 
     private @Nullable Level level;
     private final @NotNull List<Prism> prisms = new ArrayList<>();
 
     private void addPrism(final @NotNull Vector3ic position) {
-        final var prism = getEngine().addCycle("prism[" + prisms.size() + "]", Prism.class, position);
+        final var prism = getEngine().addCycle("prism[" + prisms.size() + "]", Prism.class, this, position);
         prisms.add(prism);
     }
 
@@ -91,6 +92,8 @@ public class World extends Cycle {
                        .forEach(this::addPrism);
                 });
 
+        addComponent(Transform.class);
+
         addComponent(Model.class, DEFAULT, DEFAULT);
         addComponent(Model.class, BASE, BASE);
         addComponent(Model.class, PULSE_NORTH, PULSE_NORTH);
@@ -98,5 +101,9 @@ public class World extends Cycle {
         addComponent(Model.class, PULSE_EAST, PULSE_EAST);
         addComponent(Model.class, PULSE_WEST, PULSE_WEST);
         addComponent(Model.class, RAINBOW, END_FRAME);
+    }
+
+    public boolean isAir(int x, int y, int z) {
+        return Objects.requireNonNull(level).isAir(x, y, z);
     }
 }

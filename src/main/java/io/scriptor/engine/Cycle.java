@@ -2,6 +2,7 @@ package io.scriptor.engine;
 
 import io.scriptor.engine.component.Component;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -15,14 +16,24 @@ public abstract class Cycle implements IDestructible {
     private boolean started = false;
 
     private final @NotNull Engine engine;
+    private final @Nullable Cycle parent;
     private final @NotNull Map<Class<?>, @NotNull List<Component>> components = new HashMap<>();
 
-    protected Cycle(final @NotNull Engine engine) {
+    protected Cycle(final @NotNull Engine engine, final @Nullable Cycle parent) {
         this.engine = engine;
+        this.parent = parent;
     }
 
     public @NotNull Engine getEngine() {
         return engine;
+    }
+
+    public @Nullable Cycle getParent() {
+        return parent;
+    }
+
+    public boolean isOrphan() {
+        return parent == null;
     }
 
     public <T extends Component> @NotNull T addComponent(
@@ -109,6 +120,10 @@ public abstract class Cycle implements IDestructible {
         onUpdate();
     }
 
+    public void fixed() {
+        onFixed();
+    }
+
     public void key(final int key, final int scancode, final int action, final int mods) {
         onKey(key, scancode, action, mods);
     }
@@ -130,6 +145,9 @@ public abstract class Cycle implements IDestructible {
     }
 
     protected void onUpdate() {
+    }
+
+    protected void onFixed() {
     }
 
     protected void onKey(final int key, final int scancode, final int action, final int mods) {

@@ -10,10 +10,14 @@ public class Transform extends Component {
     private final @NotNull Vector3f translation = new Vector3f();
     private final @NotNull Quaternionf rotation = new Quaternionf();
     private final @NotNull Vector3f scale = new Vector3f(1);
+    private final @NotNull Vector3f pivot = new Vector3f();
 
     private boolean dirty = false;
     private final @NotNull Matrix4f matrix = new Matrix4f();
     private final @NotNull Matrix4f inverse = new Matrix4f();
+
+    private final @NotNull Matrix4f combineMatrix = new Matrix4f();
+    private final @NotNull Matrix4f combineInverse = new Matrix4f();
 
     public Transform(final @NotNull Cycle cycle) {
         super(cycle);
@@ -58,6 +62,12 @@ public class Transform extends Component {
     public @NotNull Transform setScale(final float scale) {
         this.dirty = true;
         this.scale.set(scale);
+        return this;
+    }
+
+    public @NotNull Transform setPivot(final float x, final float y, final float z) {
+        this.dirty = true;
+        this.pivot.set(x, y, z);
         return this;
     }
 
@@ -106,20 +116,64 @@ public class Transform extends Component {
     }
 
     public @NotNull Matrix4fc getMatrix() {
-        if (dirty) {
-            dirty = false;
-            matrix.translationRotateScale(translation, rotation, scale);
-            inverse.translationRotateScaleInvert(translation, rotation, scale);
-        }
-        return matrix;
+        update();
+
+        if (getCycle().isOrphan())
+            return matrix;
+
+        combineUpdate();
+        return combineMatrix;
     }
 
     public @NotNull Matrix4fc getInverse() {
-        if (dirty) {
-            dirty = false;
-            matrix.translationRotateScale(translation, rotation, scale);
-            inverse.translationRotateScaleInvert(translation, rotation, scale);
+        update();
+
+        if (getCycle().isOrphan())
+            return inverse;
+
+        combineUpdate();
+        return combineInverse;
+    }
+
+    public void update() {
+        if (!dirty)
+            return;
+
+        dirty = false;
+
+        final var inversePivot    = pivot.negate(new Vector3f());
+        final var inverseRotation = rotation.conjugate(new Quaternionf());
+
+        matrix.identity()
+              .translate(translation)
+              .translate(pivot)
+              .rotate(rotation)
+              .scale(scale)
+              .translate(inversePivot);
+
+        inverse.identity()
+               .translate(pivot)
+               .scale(scale)
+               .rotate(inverseRotation)
+               .translate(inversePivot)
+               .translate(translation);
+
+        // matrix.translationRotateScale(translation, rotation, scale);
+        // inverse.translationRotateScaleInvert(translation, rotation, scale);
+    }
+
+    public void combineUpdate() {
+        combineMatrix.identity();
+
+        for (var parent = getCycle().getParent(); parent != null; parent = parent.getParent()) {
+            if (!parent.hasComponent(Transform.class))
+                continue;
+
+            final var transform = parent.getComponent(Transform.class);
+            combineMatrix.mul(transform.getMatrix());
         }
-        return inverse;
+
+        combineMatrix.mul(matrix);
+        combineMatrix.invert(combineInverse);
     }
 }

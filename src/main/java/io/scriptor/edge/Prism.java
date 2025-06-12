@@ -5,6 +5,7 @@ import io.scriptor.engine.Engine;
 import io.scriptor.engine.component.Model;
 import io.scriptor.engine.component.Transform;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Math;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
@@ -14,8 +15,8 @@ public class Prism extends Cycle {
 
     private final @NotNull Vector3fc position;
 
-    public Prism(final @NotNull Engine engine, final @NotNull Vector3i position) {
-        super(engine);
+    public Prism(final @NotNull Engine engine, final @Nullable Cycle parent, final @NotNull Vector3i position) {
+        super(engine, parent);
         this.position = new Vector3f(position);
     }
 
