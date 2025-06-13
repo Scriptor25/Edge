@@ -34,6 +34,7 @@ public class Player extends Cycle {
     private World world;
 
     private Direction direction = Direction.NONE;
+    private Edge edge = Edge.NONE;
     private float value;
 
     public Player(final @NotNull Engine engine, final @Nullable Cycle parent) {
@@ -80,22 +81,48 @@ public class Player extends Cycle {
                 invert = key_a;
             }
             default -> {
+                value = 0.0f;
+
                 if (key_w) {
-                    value = 0.0f;
                     direction = Direction.NORTH;
-                    cubeTransform.setPivot(-0.5f, -0.5f, 0.0f);
+
+                    edge = checkEdges(direction);
+                    if (edge == Edge.NONE) {
+                        direction = Direction.NONE;
+                        return;
+                    }
+
+                    cubeTransform.setPivot(-0.5f, edge == Edge.FLOOR ? -0.5f : 0.5f, 0.0f);
                 } else if (key_s) {
-                    value = 0.0f;
                     direction = Direction.SOUTH;
-                    cubeTransform.setPivot(0.5f, -0.5f, 0.0f);
+
+                    edge = checkEdges(direction);
+                    if (edge == Edge.NONE) {
+                        direction = Direction.NONE;
+                        return;
+                    }
+
+                    cubeTransform.setPivot(0.5f, edge == Edge.FLOOR ? -0.5f : 0.5f, 0.0f);
                 } else if (key_a) {
-                    value = 0.0f;
                     direction = Direction.WEST;
-                    cubeTransform.setPivot(0.0f, -0.5f, -0.5f);
+
+                    edge = checkEdges(direction);
+                    if (edge == Edge.NONE) {
+                        direction = Direction.NONE;
+                        return;
+                    }
+
+                    cubeTransform.setPivot(0.0f, edge == Edge.FLOOR ? -0.5f : 0.5f, -0.5f);
                 } else if (key_d) {
-                    value = 0.0f;
                     direction = Direction.EAST;
-                    cubeTransform.setPivot(0.0f, -0.5f, 0.5f);
+
+                    edge = checkEdges(direction);
+                    if (edge == Edge.NONE) {
+                        direction = Direction.NONE;
+                        return;
+                    }
+
+                    cubeTransform.setPivot(0.0f, edge == Edge.FLOOR ? -0.5f : 0.5f, 0.5f);
                 } else {
                     cubeTransform.setPivot(0.0f, 0.0f, 0.0f);
                     cubeTransform.setRotation(new Quaternionf());
@@ -134,10 +161,10 @@ public class Player extends Cycle {
             value += d;
             if (value >= 1.0f) {
                 switch (direction) {
-                    case NORTH -> transform.translate(-1.0f, 0.0f, 0.0f);
-                    case SOUTH -> transform.translate(1.0f, 0.0f, 0.0f);
-                    case WEST -> transform.translate(0.0f, 0.0f, -1.0f);
-                    case EAST -> transform.translate(0.0f, 0.0f, 1.0f);
+                    case NORTH -> transform.translate(-1.0f, edge == Edge.LEDGE ? 1.0f : 0.0f, 0.0f);
+                    case SOUTH -> transform.translate(1.0f, edge == Edge.LEDGE ? 1.0f : 0.0f, 0.0f);
+                    case WEST -> transform.translate(0.0f, edge == Edge.LEDGE ? 1.0f : 0.0f, -1.0f);
+                    case EAST -> transform.translate(0.0f, edge == Edge.LEDGE ? 1.0f : 0.0f, 1.0f);
                 }
                 direction = Direction.NONE;
             }
@@ -148,41 +175,49 @@ public class Player extends Cycle {
         force(value <= 0.5f);
     }
 
+    private boolean noFloor() {
+        final var x = (int) transform.getTranslation().x();
+        final var y = (int) transform.getTranslation().y();
+        final var z = (int) transform.getTranslation().z();
+
+        return world.isAir(x, y - 1, z);
+    }
+
     private @NotNull Edge checkEdges(final @NotNull Direction direction) {
         final var x = (int) transform.getTranslation().x();
         final var y = (int) transform.getTranslation().y();
         final var z = (int) transform.getTranslation().z();
 
-        final boolean topAir, bottomAir;
+        final boolean ceilAir, ledgeAir;
 
         switch (direction) {
             case NORTH -> {
-                topAir = world.isAir(x - 1, y, z);
-                bottomAir = world.isAir(x - 1, y - 1, z);
+                ceilAir = world.isAir(x - 1, y + 1, z);
+                ledgeAir = world.isAir(x - 1, y, z);
             }
             case SOUTH -> {
-                topAir = world.isAir(x + 1, y, z);
-                bottomAir = world.isAir(x + 1, y - 1, z);
+                ceilAir = world.isAir(x + 1, y + 1, z);
+                ledgeAir = world.isAir(x + 1, y, z);
             }
             case WEST -> {
-                topAir = world.isAir(x, y, z - 1);
-                bottomAir = world.isAir(x, y - 1, z - 1);
+                ceilAir = world.isAir(x, y + 1, z - 1);
+                ledgeAir = world.isAir(x, y, z - 1);
             }
             case EAST -> {
-                topAir = world.isAir(x, y, z + 1);
-                bottomAir = world.isAir(x, y - 1, z + 1);
+                ceilAir = world.isAir(x, y + 1, z + 1);
+                ledgeAir = world.isAir(x, y, z + 1);
             }
             default -> {
                 return Edge.NONE;
             }
         }
 
-        if (!topAir)
+        if (!ceilAir)
+            return Edge.NONE;
+
+        if (!ledgeAir)
             return Edge.LEDGE;
 
-        if (!bottomAir)
-            return Edge.FLOOR;
-
-        return Edge.NONE;
+        return Edge.FLOOR;
     }
 }
