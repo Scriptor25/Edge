@@ -7,11 +7,11 @@ out vec3 vPosition;
 out vec3 vNormal;
 
 uniform mat4 VIEW;
-uniform mat4 PROJ;
+uniform mat4 PROJECTION;
 uniform mat4 TRANSFORM;
 
 void main() {
-    gl_Position = PROJ * VIEW * TRANSFORM * POSITION;
+    gl_Position = PROJECTION * VIEW * TRANSFORM * POSITION;
     vPosition = POSITION.xyz;
     vNormal = normalize(mat3(transpose(inverse(TRANSFORM))) * NORMAL);
 }

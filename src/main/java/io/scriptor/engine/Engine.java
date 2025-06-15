@@ -3,6 +3,9 @@ package io.scriptor.engine;
 import io.scriptor.engine.component.Camera;
 import io.scriptor.engine.component.Model;
 import io.scriptor.engine.component.Transform;
+import io.scriptor.engine.data.IUniform.Uniform1f;
+import io.scriptor.engine.data.IUniform.Uniform3f;
+import io.scriptor.engine.data.IUniform.UniformMatrix4f;
 import io.scriptor.engine.data.Vertex;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -13,6 +16,7 @@ import org.lwjgl.system.MemoryUtil;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
+import static io.scriptor.edge.Constant.*;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.GL_MULTISAMPLE;
@@ -499,13 +503,14 @@ public class Engine implements IDestructible {
                                   : new Matrix4f();
 
             model.getMaterial().ok(material -> {
+
+                material.uniform(VIEW, UniformMatrix4f.class).set(false, view);
+                material.uniform(PROJECTION, UniformMatrix4f.class).set(false, proj);
+                material.uniform(TRANSFORM, UniformMatrix4f.class).set(false, transform);
+                material.uniform(TIME, Uniform1f.class).set(getTime());
+                material.uniform(SUN_DIRECTION, Uniform3f.class).set(-0.4f, -0.7f, 0.5f);
+
                 material.bind();
-                material.getProgram().ok(program -> program
-                        .uniform("VIEW", loc -> glUniformMatrix4fv(loc, false, view.get(new float[16])))
-                        .uniform("PROJ", loc -> glUniformMatrix4fv(loc, false, proj.get(new float[16])))
-                        .uniform("TRANSFORM", loc -> glUniformMatrix4fv(loc, false, transform.get(new float[16])))
-                        .uniform("TIME", loc -> glUniform1f(loc, (float) glfwGetTime()))
-                        .uniform("SUN_DIRECTION", loc -> glUniform3f(loc, -0.4f, -0.7f, 0.5f)));
 
                 model.stream().filter(Ref::ok).map(Ref::get).forEach(mesh -> {
                     mesh.bind();

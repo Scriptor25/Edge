@@ -3,10 +3,14 @@ package io.scriptor.edge;
 import io.scriptor.engine.Cycle;
 import io.scriptor.engine.Engine;
 import io.scriptor.engine.Engine.AxisInput;
+import io.scriptor.engine.data.Material;
+import io.scriptor.engine.gl.GLProgram;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static io.scriptor.edge.Constant.*;
 import static io.scriptor.engine.Engine.AxisType.*;
+import static io.scriptor.engine.data.Resources.open;
 import static org.lwjgl.glfw.GLFW.*;
 
 public class Game extends Cycle {
@@ -17,6 +21,24 @@ public class Game extends Cycle {
 
     @Override
     protected void onStart() {
+        final var programDefault    = open("shader/default.yaml", GLProgram::create).get();
+        final var programBase       = open("shader/base.yaml", GLProgram::create).get();
+        final var programRainbow    = open("shader/rainbow.yaml", GLProgram::create).get();
+        final var programPulseNorth = open("shader/pulse_north.yaml", GLProgram::create).get();
+        final var programPulseSouth = open("shader/pulse_south.yaml", GLProgram::create).get();
+        final var programPulseEast  = open("shader/pulse_east.yaml", GLProgram::create).get();
+        final var programPulseWest  = open("shader/pulse_west.yaml", GLProgram::create).get();
+
+        Material.create(DEFAULT, programDefault);
+        Material.create(BASE, programBase);
+        Material.create(RAINBOW, programRainbow);
+        Material.create(RAINBOW_CUBE, programRainbow);
+        Material.create(RAINBOW_PRISM, programRainbow);
+        Material.create(PULSE_NORTH, programPulseNorth);
+        Material.create(PULSE_SOUTH, programPulseSouth);
+        Material.create(PULSE_EAST, programPulseEast);
+        Material.create(PULSE_WEST, programPulseWest);
+
         getEngine().addCycle("world", World.class, null);
         getEngine().addCycle("player", Player.class, null);
 

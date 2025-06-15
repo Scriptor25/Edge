@@ -3,12 +3,12 @@ package io.scriptor.engine.gl;
 import io.scriptor.engine.IDestructible;
 import io.scriptor.engine.IYamlNode;
 import io.scriptor.engine.Ref;
+import io.scriptor.engine.data.IUniform;
 import io.scriptor.engine.data.ProgramInfo;
 import io.scriptor.engine.data.ShaderInfo;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
-import java.util.function.IntConsumer;
 
 import static io.scriptor.engine.data.Resources.open;
 import static org.lwjgl.opengl.GL20.*;
@@ -84,10 +84,10 @@ public class GLProgram implements IDestructible {
         return this;
     }
 
-    public @NotNull GLProgram uniform(final @NotNull String name, final @NotNull IntConsumer callback) {
+    public @NotNull GLProgram uniform(final @NotNull String name, final @NotNull IUniform callback) {
         final var location = glGetUniformLocation(handle, name);
         if (location >= 0)
-            callback.accept(location);
+            callback.apply(handle, location);
         return this;
     }
 

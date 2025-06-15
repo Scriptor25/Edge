@@ -5,6 +5,10 @@ import io.scriptor.engine.Ref;
 import io.scriptor.engine.gl.GLProgram;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
+import java.util.Map;
+
 public class Material implements IDestructible {
 
     public static @NotNull Ref<Material> get(final @NotNull String id) {
@@ -20,6 +24,7 @@ public class Material implements IDestructible {
     }
 
     private final @NotNull Ref<GLProgram> program;
+    private final @NotNull Map<String, IUniform> uniforms = new HashMap<>();
 
     private Material(final @NotNull Ref<GLProgram> program) {
         this.program = program;
@@ -28,6 +33,25 @@ public class Material implements IDestructible {
 
     public void bind() {
         program.ok(GLProgram::bind);
+        uniforms.forEach((name, uniform) -> program.ok(x -> x.uniform(name, uniform)));
+    }
+
+    public <T extends IUniform> @NotNull T uniform(final @NotNull String name, final @NotNull Class<T> type) {
+        if (uniforms.containsKey(name))
+            return type.cast(uniforms.get(name));
+
+        final T instance;
+        try {
+            instance = type.getConstructor().newInstance();
+        } catch (final InstantiationException |
+                       IllegalAccessException |
+                       InvocationTargetException |
+                       NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+
+        uniforms.put(name, instance);
+        return instance;
     }
 
     public void unbind() {

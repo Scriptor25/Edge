@@ -52,6 +52,12 @@ public class Transform extends Component {
         return this;
     }
 
+    public @NotNull Transform setRotation(final float angle, final @NotNull Vector3fc axis) {
+        this.dirty = true;
+        this.rotation.identity().rotateAxis(Math.toRadians(angle), axis);
+        return this;
+    }
+
     public @NotNull Transform setScale(final @NotNull Vector3fc scale) {
         this.dirty = true;
         this.scale.set(scale);

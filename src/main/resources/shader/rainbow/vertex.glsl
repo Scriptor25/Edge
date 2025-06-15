@@ -7,9 +7,10 @@ out vec3 vNormal;
 out vec4 vColor;
 
 uniform mat4 VIEW;
-uniform mat4 PROJ;
+uniform mat4 PROJECTION;
 uniform mat4 TRANSFORM;
 uniform float TIME;
+uniform float SPEED;
 
 const vec3 PALETTE[] = vec3[](
 vec3(0.0, 0.0, 1.0), // red
@@ -27,10 +28,10 @@ vec3(0.5, 0.0, 1.0)
 );
 
 void main() {
-    gl_Position = PROJ * VIEW * TRANSFORM * POSITION;
+    gl_Position = PROJECTION * VIEW * TRANSFORM * POSITION;
     vNormal = normalize(mat3(transpose(inverse(TRANSFORM))) * NORMAL);
 
-    float findex = TIME * 10.0;
+    float findex = TIME * SPEED;
     int index = int(findex);
     float t = findex - floor(findex);
 

@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 public class Main {
 
     public static void main(final @NotNull String @NotNull [] args) {
-        final var engine = new Engine("Edge", 360, 480);
+        final var engine = new Engine("Edge", 800, 600);
         engine.addCycle("edge", Game.class, null);
         engine.start();
         engine.destroy();
