@@ -13,6 +13,10 @@ public class Camera extends Component {
     private boolean ortho = false;
     private float viewy = 1.0f;
     private float fovy = 90.0f;
+    private float aspect = 1.0f;
+
+    private boolean dirty = true;
+    private final Matrix4f matrix = new Matrix4f();
 
     public Camera(final @NotNull Cycle cycle) {
         super(cycle);
@@ -38,40 +42,57 @@ public class Camera extends Component {
         return fovy;
     }
 
+    public float getAspect() {
+        return aspect;
+    }
+
     public @NotNull Camera setNear(final float near) {
+        this.dirty = true;
         this.near = near;
         return this;
     }
 
     public @NotNull Camera setFar(final float far) {
+        this.dirty = true;
         this.far = far;
         return this;
     }
 
     public @NotNull Camera setOrtho(final boolean ortho) {
+        this.dirty = true;
         this.ortho = ortho;
         return this;
     }
 
     public @NotNull Camera setViewY(final float viewy) {
+        this.dirty = true;
         this.viewy = viewy;
         return this;
     }
 
     public @NotNull Camera setFovY(final float fovy) {
+        this.dirty = true;
         this.fovy = fovy;
         return this;
     }
 
+    public @NotNull Camera setAspect(final float aspect) {
+        this.dirty = true;
+        this.aspect = aspect;
+        return this;
+    }
+
     public @NotNull Matrix4fc getMatrix() {
-        final var width  = getEngine().getWidth();
-        final var height = getEngine().getHeight();
-        final var aspect = (float) width / (float) height;
-        final var matrix = new Matrix4f();
+        if (!dirty)
+            return matrix;
+
+        dirty = false;
+
         if (ortho)
             matrix.setOrthoLH(-aspect * viewy, aspect * viewy, -viewy, viewy, near, far);
         else
             matrix.setPerspectiveLH(Math.toRadians(fovy), aspect, near, far);
+
         return matrix;
     }
 }

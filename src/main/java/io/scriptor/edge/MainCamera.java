@@ -3,7 +3,6 @@ package io.scriptor.edge;
 import io.scriptor.engine.Cycle;
 import io.scriptor.engine.Engine;
 import io.scriptor.engine.component.Camera;
-import io.scriptor.engine.component.Model;
 import io.scriptor.engine.component.Transform;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

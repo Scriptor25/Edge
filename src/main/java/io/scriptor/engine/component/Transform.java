@@ -7,17 +7,16 @@ import org.joml.Math;
 
 public class Transform extends Component {
 
-    private final @NotNull Vector3f translation = new Vector3f();
-    private final @NotNull Quaternionf rotation = new Quaternionf();
-    private final @NotNull Vector3f scale = new Vector3f(1);
-    private final @NotNull Vector3f pivot = new Vector3f();
+    private final Vector3f translation = new Vector3f();
+    private final Quaternionf rotation = new Quaternionf();
+    private final Vector3f scale = new Vector3f(1);
+    private final Vector3f pivot = new Vector3f();
 
     private boolean dirty = false;
-    private final @NotNull Matrix4f matrix = new Matrix4f();
-    private final @NotNull Matrix4f inverse = new Matrix4f();
-
-    private final @NotNull Matrix4f combineMatrix = new Matrix4f();
-    private final @NotNull Matrix4f combineInverse = new Matrix4f();
+    private final Matrix4f matrix = new Matrix4f();
+    private final Matrix4f inverse = new Matrix4f();
+    private final Matrix4f combineMatrix = new Matrix4f();
+    private final Matrix4f combineInverse = new Matrix4f();
 
     public Transform(final @NotNull Cycle cycle) {
         super(cycle);
@@ -113,6 +112,11 @@ public class Transform extends Component {
         translation.y = Math.clamp(min.y(), max.y(), translation.y);
         translation.z = Math.clamp(min.z(), max.z(), translation.z);
         return this;
+    }
+
+    public @NotNull Matrix4fc getRawMatrix() {
+        update();
+        return matrix;
     }
 
     public @NotNull Matrix4fc getMatrix() {

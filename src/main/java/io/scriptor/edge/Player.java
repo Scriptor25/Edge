@@ -5,37 +5,47 @@ import io.scriptor.engine.Engine;
 import io.scriptor.engine.component.Transform;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.joml.*;
 import org.joml.Math;
-import org.joml.Quaternionf;
-import org.joml.Quaternionfc;
-import org.joml.Vector3f;
-
-import static org.lwjgl.glfw.GLFW.*;
 
 public class Player extends Cycle {
 
     private enum Direction {
         NONE,
+        /**
+         * positive z
+         */
         NORTH,
+        /**
+         * negative z
+         */
         SOUTH,
+        /**
+         * negative x
+         */
         WEST,
+        /**
+         * positive x
+         */
         EAST,
     }
 
-    private enum Edge {
+    private enum EdgeType {
         NONE,
-        LEDGE,
-        FLOOR,
+        LEDGE_UP,
+        HANG,
     }
 
     private Transform transform;
 
-    private Cube cube;
     private World world;
+    private MainCamera camera;
+    private Cube cube;
 
     private Direction direction = Direction.NONE;
-    private Edge edge = Edge.NONE;
-    private float value;
+    private float value, flipValue, endValue;
+    private float dx, dy, dz;
+    private boolean grounded;
 
     public Player(final @NotNull Engine engine, final @Nullable Cycle parent) {
         super(engine, parent);
@@ -45,7 +55,7 @@ public class Player extends Cycle {
     protected void onStart() {
         world = getEngine().getCycle("world", World.class);
 
-        getEngine().addCycle("main-camera", MainCamera.class, this);
+        camera = getEngine().addCycle("main-camera", MainCamera.class, this);
         cube = getEngine().addCycle("cube", Cube.class, this);
 
         transform = addComponent(Transform.class).setTranslation(world.getSpawn());
@@ -54,170 +64,220 @@ public class Player extends Cycle {
     @Override
     protected void onUpdate() {
 
-        final var key_w = getEngine().getKey(GLFW_KEY_W);
-        final var key_s = getEngine().getKey(GLFW_KEY_S);
-        final var key_a = getEngine().getKey(GLFW_KEY_A);
-        final var key_d = getEngine().getKey(GLFW_KEY_D);
+        final var falling = isFalling();
 
-        final var cubeTransform = cube.getComponent(Transform.class);
+        if (!grounded && !falling) {
+            final var x = transform.getTranslation().x();
+            final var y = transform.getTranslation().y();
+            final var z = transform.getTranslation().z();
+            transform.setTranslation(x, Math.floor(y), z);
+        }
 
-        final boolean force, invert;
+        grounded = !falling;
+
+        if (falling) {
+            final var d = getEngine().getDeltaTime() * 9.81f;
+            transform.translate(0.0f, -d, 0.0f);
+
+            if (transform.getTranslation().y() < -10.0f)
+                transform.setTranslation(world.getSpawn());
+
+            return;
+        }
+
+        final var vertical   = getEngine().getAxis("vertical");
+        final var horizontal = getEngine().getAxis("horizontal");
+
+        final var cubeTransform   = cube.getComponent(Transform.class);
+        final var cameraTransform = camera.getComponent(Transform.class);
+
+        final boolean invert;
+        final float   force;
 
         switch (direction) {
             case NORTH -> {
-                force = key_w || key_s;
-                invert = key_s;
+                invert = vertical < 0.0f;
+                force = invert ? -vertical : vertical;
             }
             case SOUTH -> {
-                force = key_w || key_s;
-                invert = key_w;
-            }
-            case WEST -> {
-                force = key_a || key_d;
-                invert = key_d;
+                invert = vertical > 0.0f;
+                force = invert ? vertical : -vertical;
             }
             case EAST -> {
-                force = key_a || key_d;
-                invert = key_a;
+                invert = horizontal < 0.0f;
+                force = invert ? -horizontal : horizontal;
+            }
+            case WEST -> {
+                invert = horizontal > 0.0f;
+                force = invert ? horizontal : -horizontal;
             }
             default -> {
-                value = 0.0f;
+                final float px, py, pz;
 
-                if (key_w) {
+                if (vertical > 0.0f) {
                     direction = Direction.NORTH;
-
-                    edge = checkEdges(direction);
-                    if (edge == Edge.NONE) {
-                        direction = Direction.NONE;
-                        return;
-                    }
-
-                    cubeTransform.setPivot(-0.5f, edge == Edge.FLOOR ? -0.5f : 0.5f, 0.0f);
-                } else if (key_s) {
+                    px = 0.0f;
+                    pz = 0.5f;
+                    dx = 0.0f;
+                    dz = 1.0f;
+                } else if (vertical < 0.0f) {
                     direction = Direction.SOUTH;
-
-                    edge = checkEdges(direction);
-                    if (edge == Edge.NONE) {
-                        direction = Direction.NONE;
-                        return;
-                    }
-
-                    cubeTransform.setPivot(0.5f, edge == Edge.FLOOR ? -0.5f : 0.5f, 0.0f);
-                } else if (key_a) {
-                    direction = Direction.WEST;
-
-                    edge = checkEdges(direction);
-                    if (edge == Edge.NONE) {
-                        direction = Direction.NONE;
-                        return;
-                    }
-
-                    cubeTransform.setPivot(0.0f, edge == Edge.FLOOR ? -0.5f : 0.5f, -0.5f);
-                } else if (key_d) {
+                    px = 0.0f;
+                    pz = -0.5f;
+                    dx = 0.0f;
+                    dz = -1.0f;
+                } else if (horizontal > 0.0f) {
                     direction = Direction.EAST;
-
-                    edge = checkEdges(direction);
-                    if (edge == Edge.NONE) {
-                        direction = Direction.NONE;
-                        return;
-                    }
-
-                    cubeTransform.setPivot(0.0f, edge == Edge.FLOOR ? -0.5f : 0.5f, 0.5f);
+                    px = 0.5f;
+                    pz = 0.0f;
+                    dx = 1.0f;
+                    dz = 0.0f;
+                } else if (horizontal < 0.0f) {
+                    direction = Direction.WEST;
+                    px = -0.5f;
+                    pz = 0.0f;
+                    dx = -1.0f;
+                    dz = 0.0f;
                 } else {
                     cubeTransform.setPivot(0.0f, 0.0f, 0.0f);
                     cubeTransform.setRotation(new Quaternionf());
+                    return;
                 }
+
+                final var edgeType = checkEdges(direction);
+                if (edgeType == null) {
+                    direction = Direction.NONE;
+                    return;
+                }
+
+                switch (edgeType) {
+                    case LEDGE_UP -> {
+                        py = 0.5f;
+                        dy = 1.0f;
+                        flipValue = 1.5f;
+                        endValue = 2.0f;
+                    }
+                    case HANG -> {
+                        py = 0.5f;
+                        dx = dz = 0.0f;
+                        dy = 1.0f;
+                        flipValue = 1.0f;
+                        endValue = 1.0f;
+                    }
+                    case NONE -> {
+                        py = -0.5f;
+                        dy = 0.0f;
+                        flipValue = 0.5f;
+                        endValue = 1.0f;
+                    }
+                    default -> {
+                        direction = Direction.NONE;
+                        return;
+                    }
+                }
+
+                cubeTransform.setPivot(px, py, pz);
+                value = 0.0f;
 
                 return;
             }
         }
 
-        if (force)
-            force(invert);
+        if (Math.abs(force) > 0.2f)
+            move(force, invert);
         else
             relax();
 
         final var a = 0.5f * value * Math.PI_f;
 
         final Quaternionfc q = switch (direction) {
-            case NORTH -> new Quaternionf().rotateAxis(a, new Vector3f(0, 0, 1));
-            case SOUTH -> new Quaternionf().rotateAxis(a, new Vector3f(0, 0, -1));
-            case WEST -> new Quaternionf().rotateAxis(a, new Vector3f(-1, 0, 0));
-            case EAST -> new Quaternionf().rotateAxis(a, new Vector3f(1, 0, 0));
+            case NORTH -> new Quaternionf().rotateAxis(a, new Vector3f(1, 0, 0));
+            case SOUTH -> new Quaternionf().rotateAxis(a, new Vector3f(-1, 0, 0));
+            case EAST -> new Quaternionf().rotateAxis(a, new Vector3f(0, 0, -1));
+            case WEST -> new Quaternionf().rotateAxis(a, new Vector3f(0, 0, 1));
             default -> new Quaternionf();
         };
 
         cubeTransform.setRotation(q);
+
+        final var cameraCenter = new Vector4f().mul(cubeTransform.getRawMatrix());
+        cameraTransform.setTranslation(cameraCenter.xyz(new Vector3f()));
     }
 
-    private void force(boolean invert) {
-        final var d = getEngine().getDeltaTime() * 2;
+    private void move(final float force, final boolean invert) {
+        final var dv = getEngine().getDeltaTime() * force * 2.0f;
         if (invert) {
-            value -= d;
+            value -= dv;
             if (value < 1e-5f) {
                 direction = Direction.NONE;
             }
         } else {
-            value += d;
-            if (value >= 1.0f) {
-                switch (direction) {
-                    case NORTH -> transform.translate(-1.0f, edge == Edge.LEDGE ? 1.0f : 0.0f, 0.0f);
-                    case SOUTH -> transform.translate(1.0f, edge == Edge.LEDGE ? 1.0f : 0.0f, 0.0f);
-                    case WEST -> transform.translate(0.0f, edge == Edge.LEDGE ? 1.0f : 0.0f, -1.0f);
-                    case EAST -> transform.translate(0.0f, edge == Edge.LEDGE ? 1.0f : 0.0f, 1.0f);
-                }
+            value += dv;
+            if (value >= endValue) {
+                transform.translate(dx, dy, dz);
                 direction = Direction.NONE;
             }
         }
     }
 
     private void relax() {
-        force(value <= 0.5f);
+        move(1.0f, value <= flipValue);
     }
 
-    private boolean noFloor() {
-        final var x = (int) transform.getTranslation().x();
-        final var y = (int) transform.getTranslation().y();
-        final var z = (int) transform.getTranslation().z();
+    private boolean isFalling() {
+        final var fy = transform.getTranslation().y();
 
-        return world.isAir(x, y - 1, z);
+        final var ix = Math.round(transform.getTranslation().x());
+        final var iy = Math.round(transform.getTranslation().y());
+        final var iz = Math.round(transform.getTranslation().z());
+
+        final var dy = Math.abs(fy - iy);
+
+        if (dy > 1e-1f)
+            return true;
+
+        return world.isAir(ix, iy - 1, iz);
     }
 
-    private @NotNull Edge checkEdges(final @NotNull Direction direction) {
-        final var x = (int) transform.getTranslation().x();
-        final var y = (int) transform.getTranslation().y();
-        final var z = (int) transform.getTranslation().z();
+    private @Nullable Player.EdgeType checkEdges(final @NotNull Direction direction) {
+        final var ix = (int) transform.getTranslation().x();
+        final var iy = (int) transform.getTranslation().y();
+        final var iz = (int) transform.getTranslation().z();
 
-        final boolean ceilAir, ledgeAir;
+        final boolean miAir, hiAir, miAirI;
 
         switch (direction) {
             case NORTH -> {
-                ceilAir = world.isAir(x - 1, y + 1, z);
-                ledgeAir = world.isAir(x - 1, y, z);
+                miAir = world.isAir(ix, iy, iz + 1);
+                hiAir = world.isAir(ix, iy + 1, iz + 1);
+                miAirI = world.isAir(ix, iy, iz - 1);
             }
             case SOUTH -> {
-                ceilAir = world.isAir(x + 1, y + 1, z);
-                ledgeAir = world.isAir(x + 1, y, z);
-            }
-            case WEST -> {
-                ceilAir = world.isAir(x, y + 1, z - 1);
-                ledgeAir = world.isAir(x, y, z - 1);
+                miAir = world.isAir(ix, iy, iz - 1);
+                hiAir = world.isAir(ix, iy + 1, iz - 1);
+                miAirI = world.isAir(ix, iy, iz + 1);
             }
             case EAST -> {
-                ceilAir = world.isAir(x, y + 1, z + 1);
-                ledgeAir = world.isAir(x, y, z + 1);
+                miAir = world.isAir(ix + 1, iy, iz);
+                hiAir = world.isAir(ix + 1, iy + 1, iz);
+                miAirI = world.isAir(ix - 1, iy, iz);
+            }
+            case WEST -> {
+                miAir = world.isAir(ix - 1, iy, iz);
+                hiAir = world.isAir(ix - 1, iy + 1, iz);
+                miAirI = world.isAir(ix + 1, iy, iz);
             }
             default -> {
-                return Edge.NONE;
+                return null;
             }
         }
 
-        if (!ceilAir)
-            return Edge.NONE;
+        if (miAir && hiAir)
+            return EdgeType.NONE;
 
-        if (!ledgeAir)
-            return Edge.LEDGE;
+        if (hiAir)
+            return miAirI ? EdgeType.LEDGE_UP : null;
 
-        return Edge.FLOOR;
+        return EdgeType.HANG;
     }
 }
